@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements first for better caching
 COPY pyproject.toml ./
+COPY README.md ./
 RUN pip install --no-cache-dir poetry && poetry config virtualenvs.create false && poetry install --only=main
 
 # Copy source code
