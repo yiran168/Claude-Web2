@@ -140,13 +140,21 @@ class ClaudeWebApp {
                 [{ role: 'user', content: document.querySelector('.message.user:last-child')?.textContent || '' }];
             
             const model = this.currentModel;
-            const response = await this.api.sendMessage(messages, model, this.streaming);
+            const result = await this.api.sendMessage(messages, model, this.streaming);
+            const { response, format } = result;
             
             if (this.streaming) {
-                await this.handleStreamResponse(response, typingIndicator);
+                await this.handleStreamResponse(response, typingIndicator, format);
             } else {
                 const data = await response.json();
-                const content = data.choices[0].message.content;
+                let content = '';
+                
+                if (format === 'claude') {
+                    content = data.content?.[0]?.text || data.content?.[0] || '';
+                } else {
+                    content = data.choices?.[0]?.message?.content || '';
+                }
+                
                 this.updateMessageElement(typingIndicator, content);
             }
             
@@ -155,11 +163,11 @@ class ClaudeWebApp {
             this.updateMessageElement(typingIndicator, '抱歉，我遇到了一些错误，请稍后重试。');
         }
         
-        input.value = '';
+        document.getElementById('message-input').value = '';
         document.getElementById('send-btn').disabled = true;
     }
 
-    async handleStreamResponse(response, messageElement) {
+    async handleStreamResponse(response, messageElement, format = 'openai') {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let content = '';
@@ -175,11 +183,19 @@ class ClaudeWebApp {
                 if (line.startsWith('data: ') && line.trim() !== 'data: ') {
                     try {
                         const data = JSON.parse(line.slice(6));
-                        if (data.choices && data.choices[0]) {
-                            const delta = data.choices[0].delta;
-                            if (delta && delta.content) {
-                                content += delta.content;
+                        
+                        if (format === 'claude') {
+                            if (data.type === 'content_block_delta' && data.delta) {
+                                content += data.delta.text || '';
                                 this.updateMessageElement(messageElement, content);
+                            }
+                        } else {
+                            if (data.choices && data.choices[0]) {
+                                const delta = data.choices[0].delta;
+                                if (delta && delta.content) {
+                                    content += delta.content;
+                                    this.updateMessageElement(messageElement, content);
+                                }
                             }
                         }
                     } catch (e) {
@@ -346,20 +362,6 @@ class ClaudeWebApp {
         }
     }
 
-    loadSettings() {
-        const apiKey = localStorage.getItem('claude_api_key');
-        if (apiKey) {
-            document.getElementById('api-key-input').value = apiKey;
-        }
-        
-        document.getElementById('streaming-toggle').checked = this.streaming;
-        
-        const proxy = localStorage.getItem('claude_proxy');
-        if (proxy) {
-            document.getElementById('proxy-input').value = proxy;
-        }
-    }
-
     saveSettings() {
         const apiKey = document.getElementById('api-key-input')?.value || '';
         const streaming = document.getElementById('streaming-toggle')?.checked || false;
@@ -454,32 +456,93 @@ class ClaudeWebApp {
         if (oauth) localStorage.setItem('claude_oauth', oauth);
         if (cookies) localStorage.setItem('claude_cookies', cookies);
         
-        // Test accounts
-        await this.testAccounts();
-    }
-
-    async testAccounts() {
+        // Add accounts via admin API
         const btn = document.getElementById('save-account-btn');
         const originalText = btn.textContent;
-        btn.textContent = '测试账户中...';
+        btn.textContent = '保存中...';
         btn.disabled = true;
-        
+
         try {
-            const response = await fetch('/health/health', {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${this.api.apiKey}` }
-            });
+            const result = await this.addAccountsViaAPI(validSessions, validOAuth, validCookies);
             
-            if (response.ok) {
-                this.showToast('账户保存并激活成功 ✅');
+            if (result.success) {
+                this.showToast(`账户保存成功 ✅ (${result.added}/${result.total} 个)`);
+                this.refreshAccountList();
             } else {
-                this.showToast('账户已保存，请检查格式');
+                this.showToast(result.error || '保存账户失败');
             }
-        } catch (e) {
-            this.showToast('账户已保存 (无法立即测试)');
         } finally {
             btn.textContent = originalText;
             btn.disabled = false;
+        }
+    }
+
+    async addAccountsViaAPI(sessions, oauth, cookies) {
+        let total = 0;
+        let added = 0;
+
+        // Add session keys
+        for (const key of sessions) {
+            total++;
+            try {
+                const res = await fetch('/admin/accounts/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_type: 'session_key', session_key: key })
+                });
+                if (res.ok) added++;
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        // Add OAuth tokens
+        for (const token of oauth) {
+            total++;
+            try {
+                const res = await fetch('/admin/accounts/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_type: 'oauth', oauth_token: token })
+                });
+                if (res.ok) added++;
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        // Add cookies
+        for (const cookieObj of cookies) {
+            total++;
+            try {
+                const cookieStr = JSON.stringify(cookieObj);
+                const res = await fetch('/admin/accounts/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ auth_type: 'cookie', cookie_value: cookieStr })
+                });
+                if (res.ok) added++;
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        return {
+            success: added > 0 || total === 0,
+            added,
+            total
+        };
+    }
+
+    async refreshAccountList() {
+        try {
+            const res = await fetch('/admin/accounts');
+            if (res.ok) {
+                const data = await res.json();
+                this.showToast(`账户列表更新: ${data.accounts?.length || 0} 个账户激活`);
+            }
+        } catch (e) {
+            // Silent fail
         }
     }
 

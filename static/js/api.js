@@ -37,13 +37,29 @@ class ClaudeAPI {
     }
 
     async sendMessage(messages, model, stream = true) {
-        const payload = {
-            model: model,
-            messages: messages,
-            stream: stream
-        };
+        const responseFormat = this.responseFormat || 'openai';
+        let endpoint = '/v1/chat/completions';
+        let payload = {};
 
-        const response = await fetch(`${this.baseURL}/chat/completions`, {
+        if (responseFormat === 'claude') {
+            // Claude native format
+            endpoint = '/v1/messages';
+            payload = {
+                model: model,
+                messages: messages,
+                stream: stream,
+                max_tokens: 4096
+            };
+        } else {
+            // OpenAI compatible format
+            payload = {
+                model: model,
+                messages: messages,
+                stream: stream
+            };
+        }
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -57,7 +73,7 @@ class ClaudeAPI {
             throw new Error(error.detail || 'API request failed');
         }
 
-        return response;
+        return { response, format: responseFormat };
     }
 
     async healthCheck() {
