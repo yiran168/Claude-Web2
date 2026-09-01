@@ -3,7 +3,7 @@
 import os
 import json
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Any
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, HttpUrl
@@ -32,18 +32,18 @@ class Settings(BaseSettings):
         description="Folder path for storing SQLite DB and data",
     )
 
-    # Authentication (comma-separated for multiple accounts)
+    # Authentication
     sessions: List[str] = Field(
         default_factory=list,
         env="SESSIONS",
-        description="Comma-separated list of Claude.ai session keys (sk-ant-sid01-*)",
+        description="JSON array of Claude.ai session keys (sk-ant-sid01-*)",
     )
-    cookies: List[str] = Field(
+    cookies: Union[str, List[Any]] = Field(
         default_factory=list,
         env="COOKIES",
-        description="Comma-separated list of Claude.ai cookie strings",
+        description="JSON array of Claude.ai cookie strings or objects",
     )
-    oauth_tokens: List[str] = Field(
+    oauth_tokens: Union[str, List[Any]] = Field(
         default_factory=list,
         env="OAUTH_TOKENS",
         description="JSON array of OAuth token objects",
@@ -123,12 +123,30 @@ class Settings(BaseSettings):
         """Get database path."""
         return self.data_folder / "claude_web2.db"
 
+    @classmethod
+    def _parse_list_field(cls, value: Union[str, List[Any], None]) -> List[Any]:
+        """Parse a list field from env var. Handles JSON arrays and comma-separated strings."""
+        if not value:
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            # Try JSON array first
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+            # Fall back to comma-separated
+            return [s.strip() for s in value.split(",") if s.strip()]
+        return []
+
     def model_post_init(self, __context) -> None:
         """Post-init processing."""
-        if self.cookies and isinstance(self.cookies, str):
-            self.cookies = [c.strip() for c in self.cookies.split(",") if c.strip()]
-        if self.sessions and isinstance(self.sessions, str):
-            self.sessions = [s.strip() for s in self.sessions.split(",") if s.strip()]
+        self.sessions = self._parse_list_field(self.sessions)
+        self.cookies = self._parse_list_field(self.cookies)
+        self.oauth_tokens = self._parse_list_field(self.oauth_tokens)
 
 
 settings = Settings()
