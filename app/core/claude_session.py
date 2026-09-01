@@ -101,36 +101,29 @@ class ClaudeWebSession:
         Send a tool result to continue a paused conversation.
 
         Args:
-            tool_result: Tool result data in Claude format
+            tool_result: Tool result data with keys:
+                - tool_use_id: ID of the tool use to respond to
+                - content: Tool result content (string or list of content blocks)
+                - is_error: Whether this is an error result
         """
         if not self.conv_uuid or not self.client:
             raise ValueError("Session not properly initialized")
 
         self.update_activity()
 
-        # Send the tool result as a new message
-        from app.models.internal import Attachment
-
-        # Format tool result as prompt continuation
-        tool_prompt = f"\n\n[Tool result for {tool_result.get('tool_use_id', 'unknown')}]\n"
-        content = tool_result.get("content", "")
-        if isinstance(content, str):
-            tool_prompt += content
-        elif isinstance(content, list):
-            for item in content:
-                if isinstance(item, dict) and "text" in item:
-                    tool_prompt += item["text"]
-
-        result = await self.client.send_message(
+        # Call the client's send_tool_result which uses Claude's /tool_result endpoint
+        # and returns the SSE stream continuation
+        stream = self.client.send_tool_result(
             conv_uuid=self.conv_uuid,
-            prompt=tool_prompt,
-            model=None,
-            stream=True,
-            max_tokens=4096,
-            attachments=[Attachment.from_text(tool_prompt)],
+            tool_use_id=tool_result.get("tool_use_id", ""),
+            tool_name=tool_result.get("tool_name", ""),
+            tool_result=tool_result.get("content", ""),
         )
 
-        self.sse_stream = result
+        # Set the SSE stream for the caller to consume
+        self.sse_stream = stream
+
+        logger.debug(f"Sent tool result for {tool_result.get('tool_use_id', 'unknown')}")
 
     async def upload_file(
         self, file_data: bytes, filename: str, content_type: str

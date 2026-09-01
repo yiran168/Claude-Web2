@@ -389,9 +389,12 @@ class ClaudeWebClient:
         tool_use_id: str,
         tool_name: str,
         tool_result: str,
-    ) -> bool:
+    ):
         """
-        Send a tool result back to Claude.ai.
+        Send a tool result back to Claude.ai and resume the SSE stream.
+
+        Uses Claude's /tool_result endpoint with the proper payload format
+        matching the clove reference implementation.
 
         Args:
             conv_uuid: Conversation UUID
@@ -400,36 +403,53 @@ class ClaudeWebClient:
             tool_result: The result string from the tool
 
         Returns:
-            True if successful, False otherwise
+            SSE stream (async iterator of text chunks) for the continuation
         """
         org_uuid = self.org_uuid
         if not org_uuid:
             logger.error("No organization UUID available for tool result")
-            return False
+            return
 
         url = f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}/tool_result"
 
-        # Payload format matching clove reference project
+        # Payload format matching clove/claude reference project
+        content = tool_result if isinstance(tool_result, str) else str(tool_result)
         payload = {
-            "uuid": tool_use_id,
-            "tool_name": tool_name,
-            "result": tool_result,
+            "tool_use_id": tool_use_id,
+            "content": [
+                {
+                    "type": "text",
+                    "text": content
+                }
+            ],
+            "is_error": False,
         }
 
-        try:
-            response = await self._request(
-                "POST", url,
-                json_data=payload,
-                timeout=30.0,
-                conv_uuid=conv_uuid,
-            )
-            success = response.status_code == 200
-            if not success:
-                logger.error(f"Tool result failed: {response.status_code}")
-            return success
-        except Exception as e:
-            logger.error(f"Error sending tool result: {e}")
-            return False
+        response = await self._request(
+            "POST", url,
+            json_data=payload,
+            stream=True,  # Stream the response for SSE continuation
+            timeout=300.0,  # 5 minute timeout for long generations
+            conv_uuid=conv_uuid,
+        )
+
+        if response.status_code != 200:
+            error_msg = await self._extract_error(response)
+            logger.error(f"Tool result failed: {response.status_code} - {error_msg}")
+            # Return an error SSE event
+            error_event = {
+                "type": "error",
+                "error": {
+                    "type": "api_error",
+                    "message": error_msg,
+                }
+            }
+            yield f"data: {json.dumps(error_event)}\n\n"
+            return
+
+        # Return the SSE stream
+        async for chunk in response.aiter_text():
+            yield chunk
 
     async def delete_conversation(self, conv_uuid: str) -> bool:
         """

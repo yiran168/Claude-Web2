@@ -57,15 +57,16 @@ class OAuthToken:
         Returns True if refresh succeeded.
         """
         import httpx
+        from app.config import settings
 
-        token_url = "https://claude.ai/api/oauth/token"
+        # Use the same OAuth token URL as clove reference project
+        token_url = getattr(settings, 'oauth_token_url', None) or "https://console.anthropic.com/v1/oauth/token"
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(token_url, data={
                     "grant_type": "refresh_token",
                     "refresh_token": self.refresh_token,
-                    "client_id": "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
-                    "scope": "accounts:app:*  user:profile  user:inference  user:notification  user:account  user:organization  user:workspace:* user:chat_conversation  user:message  user:attachment  user:document  user:image  user:video  user:audio  user:code_interpreter  user:artifact  user:tool_use  user:tool_result  user:cache  user:history  user:settings  user:integrations  user:ai_feedback  user:notify  user:presets  user:sessions  user:files  user:uploads  user:workflows  user:automation  user:automations  user:tasks  user:task  user:projects  user:project  user:comments  user:comment  user:notifications  user:notification  user:search  user:bookmarks  user:preferences  user:preferences  user:settings  user:settings  user:settings",
+                    "client_id": settings.oauth_client_id if hasattr(settings, 'oauth_client_id') else "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
                 }, headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                     "User-Agent": "claude-web2/1.0.0",
