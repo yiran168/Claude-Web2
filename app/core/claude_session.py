@@ -89,6 +89,8 @@ class ClaudeWebSession:
             attachments=attachments,
             files=files,
             tools=tools,
+            rendering_mode="messages",
+            timezone="UTC",
         )
 
         self.sse_stream = response
@@ -116,7 +118,6 @@ class ClaudeWebSession:
         stream = self.client.send_tool_result(
             conv_uuid=self.conv_uuid,
             tool_use_id=tool_result.get("tool_use_id", ""),
-            tool_name=tool_result.get("tool_name", ""),
             tool_result=tool_result.get("content", ""),
         )
 

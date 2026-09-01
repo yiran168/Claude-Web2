@@ -383,7 +383,6 @@ class ClaudeWebClient:
         self,
         conv_uuid: str,
         tool_use_id: str,
-        tool_name: str,
         tool_result: str,
     ):
         """
