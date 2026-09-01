@@ -317,21 +317,17 @@ class ClaudeWebClient:
         url = f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}/completion"
 
         payload = {
-            "uuid": conv_uuid,
             "prompt": prompt,
             "max_tokens_to_sample": max_tokens,
             "attachments": attachments or [],
             "files": files or [],
             "rendering_mode": rendering_mode,
             "timezone": timezone,
-            "sync_sources": [],
         }
 
         # Use parent_message_uuid if provided (for session resume)
         if hasattr(self, '_last_message_uuid') and self._last_message_uuid:
             payload["parent_message_uuid"] = self._last_message_uuid
-        else:
-            payload["parent_message_uuid"] = "00000000-0000-4000-8000-000000000000"
 
         if model and not model.startswith("claude-sonnet-4"):
             payload["model"] = model
@@ -413,15 +409,28 @@ class ClaudeWebClient:
         url = f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}/tool_result"
 
         # Payload format matching clove/claude reference project
-        content = tool_result if isinstance(tool_result, str) else str(tool_result)
+        # content should be array of content blocks in the format [{"type": "text", "text": "..."}]
+        # Handle various input formats:
+        if isinstance(tool_result, str):
+            content = [{"type": "text", "text": tool_result}]
+        elif isinstance(tool_result, list):
+            content = []
+            for item in tool_result:
+                if isinstance(item, str):
+                    content.append({"type": "text", "text": item})
+                elif isinstance(item, dict) and "text" in item:
+                    # Already a content block, use as-is
+                    content.append(item)
+                elif isinstance(item, dict) and "type" in item:
+                    content.append(item)
+                else:
+                    content.append({"type": "text", "text": str(item)})
+        else:
+            content = [{"type": "text", "text": str(tool_result)}]
+
         payload = {
             "tool_use_id": tool_use_id,
-            "content": [
-                {
-                    "type": "text",
-                    "text": content
-                }
-            ],
+            "content": content,
             "is_error": False,
         }
 

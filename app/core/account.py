@@ -59,14 +59,13 @@ class OAuthToken:
         import httpx
         from app.config import settings
 
-        # Use the same OAuth token URL as clove reference project
-        token_url = getattr(settings, 'oauth_token_url', None) or "https://console.anthropic.com/v1/oauth/token"
+        token_url = settings.oauth_token_url
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(token_url, data={
                     "grant_type": "refresh_token",
                     "refresh_token": self.refresh_token,
-                    "client_id": settings.oauth_client_id if hasattr(settings, 'oauth_client_id') else "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+                    "client_id": settings.oauth_client_id,
                 }, headers={
                     "Content-Type": "application/x-www-form-urlencoded",
                     "User-Agent": "claude-web2/1.0.0",

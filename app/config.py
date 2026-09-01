@@ -61,6 +61,18 @@ class Settings(BaseSettings):
         description="Base URL for Anthropic API (if using API key)",
     )
 
+    # Claude OAuth settings
+    oauth_client_id: str = Field(
+        default="9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+        env="OAUTH_CLIENT_ID",
+        description="OAuth client ID for Claude authentication",
+    )
+    oauth_token_url: str = Field(
+        default="https://console.anthropic.com/v1/oauth/token",
+        env="OAUTH_TOKEN_URL",
+        description="OAuth token exchange endpoint URL",
+    )
+
     # API key for authenticating requests to this proxy
     api_key: Optional[str] = Field(
         default=None,

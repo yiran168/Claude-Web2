@@ -86,8 +86,6 @@ class FormatProcessor(BaseProcessor):
             max_tokens_to_sample=max_tokens or get_default_max_tokens(model),
             timezone="UTC",
             tools=tools_formatted,
-            parent_message_uuid="00000000-0000-4000-8000-000000000000",
-            sync_sources=[],
         )
 
         # Store metadata for session processor
@@ -224,8 +222,9 @@ class ToolCallProcessor(BaseProcessor):
             tool_use_id = tool_msg.get("tool_call_id")
             if tool_use_id in pending_calls:
                 result_content = tool_msg.get("content", "")
-                if isinstance(result_content, str):
-                    result_content = [result_content]
+                # Keep content as-is - the client will handle formatting it
+                # as proper content blocks [{"type": "text", "text": "..."}]
+                # This matches clove's approach of passing structured content
 
                 tool_result_payload = {
                     "tool_use_id": tool_use_id,

@@ -31,14 +31,8 @@ class ClaudeWebRequest(BaseModel):
     model: Optional[str] = None
     rendering_mode: str = "messages"
     prompt: str = ""
-    timezone: str = "UTC"
+    timezone: str
     tools: List[Dict[str, Any]] = Field(default_factory=list)
-    parent_message_uuid: str = "00000000-0000-4000-8000-000000000000"
-    sync_sources: List[Any] = Field(default_factory=list)
-    personalized_styles: List[Dict[str, Any]] = Field(default_factory=list)
-    include_conversation_preferences: bool = True
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    model_config = {"extra": "allow"}
 
 
 class StreamingEvent(BaseModel):
