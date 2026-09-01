@@ -378,6 +378,7 @@ class ClaudeWebClient:
                         msg_uuid = data.get("uuid")
                         if msg_uuid:
                             self._last_message_uuid = msg_uuid
+                            logger.debug(f"Tracked message UUID: {msg_uuid}")
                 except (json.JSONDecodeError, KeyError):
                     pass
             yield chunk
@@ -408,6 +409,7 @@ class ClaudeWebClient:
 
         url = f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}/tool_result"
 
+        # Payload format matching clove reference project
         payload = {
             "uuid": tool_use_id,
             "tool_name": tool_name,

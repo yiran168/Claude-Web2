@@ -69,13 +69,13 @@ class EventSerializer:
             if event_type == "content_block_delta":
                 delta = event_data.get("delta", {})
                 text = delta.get("text", "")
-                input_json = delta.get("input_json", {})
+                partial_json = delta.get("partial_json", "")
 
                 # Handle tool call arguments
                 if tool_calls_started and current_tool_call_id:
-                    if input_json:
-                        # Extract partial JSON string directly, avoid double encoding
-                        raw_str = input_json.get("partial_json", "") if isinstance(input_json, dict) else str(input_json)
+                    if partial_json:
+                        # Extract partial JSON string directly
+                        raw_str = partial_json if isinstance(partial_json, str) else str(partial_json)
                         current_tool_args += raw_str
                         yield self._serialize_tool_calls_delta(
                             current_tool_call_id, current_tool_name,

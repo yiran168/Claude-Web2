@@ -170,9 +170,9 @@ def format_prompt(
 
     # Add system prompt if provided
     if system_prompt:
-        parts.append(f"System: {system_prompt}{lang_hint}")
+        parts.append(f"\x08System: {system_prompt}{lang_hint}")
         if tool_block:
-            parts.append(f"\n\nYou have access to the following tools. Use them by enclosing your tool calls in <function_calls> and </function_calls> XML tags:\n{tool_block}")
+            parts.append(f"\n\nYou have access to the following tools. Use them by enclosing your tool calls in <\x08antml:function_calls> and </\x08antml:function_calls> XML tags:\n{tool_block}")
             added_tools = True
 
     for msg in messages:
@@ -192,19 +192,19 @@ def format_prompt(
             content = "".join(text_parts)
 
         if role == "system":
-            text = f"System: {content}{lang_hint}"
+            text = f"\x08System: {content}{lang_hint}"
             if tool_block and not added_tools:
-                text += f"\n\nYou have access to the following tools. Use them by enclosing your tool calls in <function_calls> and </function_calls> XML tags:\n{tool_block}"
+                text += f"\n\nYou have access to the following tools. Use them by enclosing your tool calls in <\x08antml:function_calls> and </\x08antml:function_calls> XML tags:\n{tool_block}"
                 added_tools = True
             parts.append(text)
 
         elif role == "user":
             # If there are tool calls in the previous assistant message, continue from there
-            if not added_tools and tool_block and not any(p.startswith("System:") for p in parts):
+            if not added_tools and tool_block and not any(p.startswith("\x08System:") for p in parts):
                 # Add tools before first user message if no system message
-                parts.insert(0, f"System:{lang_hint} You have access to the following tools. Use them by enclosing your tool calls in <function_calls> and </function_calls> XML tags:\n{tool_block}")
+                parts.insert(0, f"\x08System:{lang_hint} You have access to the following tools. Use them by enclosing your tool calls in <\x08antml:function_calls> and </\x08antml:function_calls> XML tags:\n{tool_block}")
                 added_tools = True
-            parts.append(f"Human: {content}")
+            parts.append(f"\x08Human: {content}")
 
         elif role == "assistant":
             tc = msg.get("tool_calls")
@@ -220,26 +220,26 @@ def format_prompt(
                     calls.append(format_tool_call_native(name, args))
 
                 if content:
-                    text = f"Assistant: {content}\n<function_calls>\n"
+                    text = f"\x08Assistant: {content}\n<\x08antml:function_calls>\n"
                 else:
-                    text = "Assistant:\n<function_calls>\n"
-                text += "\n".join(calls) + "\n</function_calls>"
+                    text = f"\x08Assistant:\n<\x08antml:function_calls>\n"
+                text += "\n".join(calls) + f"\n</\x08antml:function_calls>"
                 parts.append(text)
             else:
-                parts.append(f"Assistant: {content}")
+                parts.append(f"\x08Assistant: {content}")
 
         elif role == "tool":
             name = msg.get("name", "")
             tid = msg.get("tool_call_id", "")
             label = f" (tool: {name})" if name else f" (id: {tid})" if tid else ""
             result_content = content[:500] if isinstance(content, str) else str(content)[:500]
-            parts.append(f"Human: [Tool result{label}]\n{result_content}")
+            parts.append(f"\x08Human: [Tool result{label}]\n{result_content}")
 
     # Add tools before assistant if not yet added
     if tool_block and not added_tools:
-        parts.insert(0, f"System:{lang_hint} You have access to the following tools. Use them by enclosing your tool calls in <function_calls> and </function_calls> XML tags:\n{tool_block}")
+        parts.insert(0, f"\x08System:{lang_hint} You have access to the following tools. Use them by enclosing your tool calls in <\x08antml:function_calls> and </\x08antml:function_calls> XML tags:\n{tool_block}")
 
-    parts.append("Assistant:")
+    parts.append("\x08Assistant:")
 
     return "\n\n".join(parts)
 
@@ -262,19 +262,14 @@ def parse_tool_calls_from_text(text: str) -> Optional[List[Dict[str, Any]]]:
     """
     calls = []
 
-    # Pattern 1: <antml:invoke name="X"><antml:parameter name="Y">Z</antml:parameter></antml:invoke>
-    # Also support \x08antml: prefix variant
-    invoke_re = re.compile(
-        r'(?:\\x08antml:|atml:|invoke\s+name="([^"]+)"[^>]*>)([^<]*)(?:</antml:invoke>|</invoke>|$)',
-        re.DOTALL
-    )
-    # More comprehensive pattern for antml:invoke
+    # Pattern: <\x08antml:invoke name="X"><\x08antml:parameter name="Y">Z</\x08antml:parameter></\x08antml:invoke>
+    # Also support atml:invoke and plain invoke formats
     antml_invoke_re = re.compile(
-        r'<(?:\\x08antml:|atml:|)invoke\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\\x08antml:|atml:|)invoke>|$)',
+        r'<(?:\x08antml:|atml:|)invoke\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\x08antml:|atml:|)invoke>|$)',
         re.DOTALL
     )
     param_re = re.compile(
-        r'<(?:\\x08antml:|atml:|)parameter\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\\x08antml:|atml:|)parameter>|$)',
+        r'<(?:\x08antml:|atml:|)parameter\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\x08antml:|atml:|)parameter>|$)',
         re.DOTALL
     )
 
