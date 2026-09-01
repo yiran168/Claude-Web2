@@ -58,7 +58,7 @@ class OAuthToken:
         """
         import httpx
         
-        token_url = "https://claude.ai/oauth/token"
+        token_url = "https://claude.ai/api/oauth/token"  # Correct endpoint from clove reference
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(token_url, data={

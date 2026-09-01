@@ -41,6 +41,7 @@ async def get_client(
             timeout=timeout,
             proxies=proxy,
             follow_redirects=follow_redirects,
+            http2=True,  # Enable HTTP/2 for better Cloudflare bypass
         )
         if headers:
             client.headers.update(headers)

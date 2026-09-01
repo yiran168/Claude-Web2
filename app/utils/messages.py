@@ -152,7 +152,14 @@ def format_prompt(
     """
     tool_block = format_tools_for_claude(tools) if tools else ""
     lang = detect_language(messages)
-    lang_hint = "\n\nIMPORTANT: Always respond in Russian.\n" if lang == "ru" else ""
+    # Language hint for Claude to match user's language
+    lang_hints = {
+        "ru": "\n\nIMPORTANT: Always respond in Russian.\n",
+        "zh": "\n\nIMPORTANT: 始终用中文回答。\n",
+        "ja": "\n\nIMPORTANT: 日本語で回答してください。\n",
+        "ko": "\n\nIMPORTANT: 한국어로 답변하십시오。\n",
+    }
+    lang_hint = lang_hints.get(lang, "")
 
     parts = []
     added_tools = False
@@ -176,8 +183,8 @@ def format_prompt(
                         text_parts.append(block.get("text", ""))
                     elif block.get("type") == "image_url":
                         # Images are handled separately via file upload
-                        # Just note their presence
-                        text_parts.append("[Image attached]")
+                        # Do NOT add placeholder text - let session processor handle attachments
+                        pass
             content = "".join(text_parts)
 
         if role == "system":

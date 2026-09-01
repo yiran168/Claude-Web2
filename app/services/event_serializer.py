@@ -57,10 +57,12 @@ class EventSerializer:
                 # Handle tool call arguments
                 if tool_calls_started and current_tool_call_id:
                     if input_json:
-                        current_tool_args += json.dumps(input_json, ensure_ascii=False)
+                        # Extract partial JSON string directly, avoid double encoding
+                        raw_str = input_json.get("partial_json", "") if isinstance(input_json, dict) else str(input_json)
+                        current_tool_args += raw_str
                         yield self._serialize_tool_calls_delta(
                             current_tool_call_id, current_tool_name,
-                            json.dumps(input_json, ensure_ascii=False)
+                            raw_str  # Pass raw string, not re-serialized
                         )
                     continue
 
