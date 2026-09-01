@@ -13,6 +13,20 @@ from app.models.openai import (
 
 # Model name mapping (OpenAI-style to Claude AI-style)
 MODEL_MAP = {
+    # Claude 4 (latest)
+    "claude-4-sonnet": "claude-sonnet-4-20250514",
+    "claude-4-sonnet-latest": "claude-sonnet-4-20250514",
+    "claude-sonnet-4": "claude-sonnet-4-20250514",
+    "claude-sonnet-4-latest": "claude-sonnet-4-20250514",
+    "claude-4-opus": "claude-opus-4-20250514",
+    "claude-4-opus-latest": "claude-opus-4-20250514",
+    "claude-opus-4": "claude-opus-4-20250514",
+    "claude-opus-4-latest": "claude-opus-4-20250514",
+    
+    # Claude 3.7
+    "claude-3-7-sonnet": "claude-3-7-sonnet-20250219",
+    "claude-3-7-sonnet-latest": "claude-3-7-sonnet-20250219",
+    
     # Claude 3.5
     "claude-3-5-sonnet": "claude-3-5-sonnet-20241022",
     "claude-3-5-sonnet-latest": "claude-3-5-sonnet-20241022",
@@ -24,12 +38,6 @@ MODEL_MAP = {
     "claude-3-opus-latest": "claude-3-opus-20240229",
     "claude-3-sonnet": "claude-3-sonnet-20240229",
     "claude-3-haiku": "claude-3-haiku-20240307",
-    
-    # Claude 4
-    "claude-4-sonnet": "claude-sonnet-4-20250514",
-    "claude-sonnet-4": "claude-sonnet-4-20250514",
-    "claude-4-opus": "claude-opus-4-20250514",
-    "claude-opus-4": "claude-opus-4-20250514",
     
     # Legacy
     "claude-2.1": "claude-2.1",

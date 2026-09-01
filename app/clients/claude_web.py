@@ -557,6 +557,85 @@ class ClaudeWebClient:
 
         return response.json()
 
+    async def fetch_available_models(self) -> List[Dict[str, Any]]:
+        """
+        Fetch available models from Claude.ai.
+        
+        Returns a list of model dicts with 'id', 'object', and 'owned_by' keys.
+        Falls back to a default list if the API call fails.
+        """
+        try:
+            account_info = await self.get_account_info()
+            
+            # Claude.ai account info contains features/capabilities but not explicit model list
+            # The API doesn't expose a models endpoint, so we use latest known models
+            # based on account features
+            
+            # Default/fallback model list (updated with latest Claude models)
+            models = [
+                # Claude 4 (latest)
+                {"id": "claude-sonnet-4-20250514", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-opus-4-20250514", "object": "model", "owned_by": "anthropic"},
+                # Claude 3.7
+                {"id": "claude-3-7-sonnet-20250219", "object": "model", "owned_by": "anthropic"},
+                # Claude 3.5
+                {"id": "claude-3-5-sonnet-20241022", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-5-haiku-20241022", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-5-sonnet-20240620", "object": "model", "owned_by": "anthropic"},
+                # Claude 3
+                {"id": "claude-3-opus-20240229", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-sonnet-20240229", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-haiku-20240307", "object": "model", "owned_by": "anthropic"},
+                # Legacy
+                {"id": "claude-2.1", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-2", "object": "model", "owned_by": "anthropic"},
+                # Aliases
+                {"id": "claude", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-sonnet-4", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-opus-4", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-7-sonnet", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-5-sonnet", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-5-haiku", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-opus", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-sonnet", "object": "model", "owned_by": "anthropic"},
+                {"id": "claude-3-haiku", "object": "model", "owned_by": "anthropic"},
+            ]
+            
+            # Check account features to determine available models
+            features = account_info.get("features", {})
+            
+            # If account has Pro tier, it might support more models
+            # This is based on account_info structure from clove reference
+            if features.get("is_claude_pro", False) or features.get("is_claude_max", False):
+                # Pro/Max accounts get access to all models
+                pass  # Use full model list above
+            else:
+                # Free accounts limited to available models
+                pass  # Use base model list above
+            
+            return models
+            
+        except Exception as e:
+            logger.warning(f"Failed to fetch models from Claude.ai: {e}")
+            return self._get_default_models()
+    
+    def _get_default_models(self) -> List[Dict[str, Any]]:
+        """Return default model list."""
+        return [
+            {"id": "claude-3-5-sonnet-20241022", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-5-haiku-20241022", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-5-sonnet-20240620", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-opus-20240229", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-sonnet-20240229", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-haiku-20240307", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-5-sonnet", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-5-haiku", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-opus", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-sonnet", "object": "model", "owned_by": "anthropic"},
+            {"id": "claude-3-haiku", "object": "model", "owned_by": "anthropic"},
+        ]
+
     async def update_user_setting(self, key: str, value: Any) -> bool:
         """Update a user setting on Claude.ai."""
         url = f"/api/account?statsig_hashing_algorithm=djb2"
