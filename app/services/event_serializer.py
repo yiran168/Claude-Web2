@@ -31,7 +31,6 @@ class EventSerializer:
         yield self._serialize_message_start()
 
         tool_calls_started = False
-        tool_calls_first_chunk = False
         current_tool_call_id = None
         current_tool_name = None
         current_tool_args = ""
@@ -77,11 +76,11 @@ class EventSerializer:
                         # Extract partial JSON string directly
                         raw_str = partial_json if isinstance(partial_json, str) else str(partial_json)
                         current_tool_args += raw_str
+                        # is_first=False because content_block_start already emitted id/type/name
                         yield self._serialize_tool_calls_delta(
                             current_tool_call_id, current_tool_name,
-                            raw_str, is_first=tool_calls_first_chunk
+                            raw_str, is_first=False
                         )
-                        tool_calls_first_chunk = False
                     continue
 
                 if not text:
@@ -105,7 +104,6 @@ class EventSerializer:
 
                 if block_type == "tool_use":
                     tool_calls_started = True
-                    tool_calls_first_chunk = True
                     current_tool_call_id = content_block.get("id")
                     current_tool_name = content_block.get("name")
                     current_tool_args = ""
@@ -278,7 +276,7 @@ class EventSerializer:
                 "type": "function",
                 "function": {
                     "name": content_block.get("name"),
-                    "arguments": "",
+                    "arguments": "",  # Empty initially, will be streamed via deltas
                 },
             }]
         elif block_type == "thinking":
