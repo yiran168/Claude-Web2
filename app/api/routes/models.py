@@ -70,11 +70,29 @@ async def get_models() -> List[Dict[str, Any]]:
 @router.get("/models", tags=["Models"])
 async def list_models():
     """List available models. Fetches dynamically from Claude.ai when accounts are configured."""
-    models = await get_models()
+    account_manager = AccountManager()
+    
+    try:
+        account = await account_manager.get_available_account()
+        if account:
+            client = ClaudeWebClient(account=account)
+            models = await client.fetch_available_models()
+            if models:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "object": "list",
+                        "data": models,
+                    }
+                )
+    except Exception:
+        pass
+    
+    # Fall back to default models
     return JSONResponse(
         status_code=200,
         content={
             "object": "list",
-            "data": models,
+            "data": DEFAULT_MODELS,
         }
     )
