@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 try:
-    from curl_impersonate import AsyncClient as ImpersonateClient
-    HAS_CURL_IMPERSONATE = True
+    from curl_cffi import AsyncClient as ImpersonateClient
+    HAS_CURL_CFFI = True
 except ImportError:
-    logger.warning("curl_impersonate not available, falling back to httpx")
-    HAS_CURL_IMPERSONATE = False
+    logger.warning("curl_cffi not available, falling back to httpx")
+    HAS_CURL_CFFI = False
 
 import httpx
 
@@ -33,9 +33,9 @@ async def get_client(
         headers: Default headers to set
 
     Yields:
-        HTTP client (httpx or curl_impersonate)
+        HTTP client (httpx or curl_cffi)
     """
-    if HAS_CURL_IMPERSONATE:
+    if HAS_CURL_CFFI:
         client = ImpersonateClient(
             impersonate=impersonate,
             timeout=timeout,

@@ -107,7 +107,7 @@ class FormatProcessor(BaseProcessor):
         return context
 
     async def _extract_images(self, messages: List[Dict]) -> List[Dict[str, Any]]:
-        """Extract image data from messages."""
+        """Extract image data from messages, downloading external URLs."""
         images = []
 
         for msg in messages:
@@ -128,13 +128,33 @@ class FormatProcessor(BaseProcessor):
                             "detail": detail,
                         })
                     else:
-                        # External URL - needs downloading
-                        images.append({
-                            "url": url,
-                            "detail": detail,
-                        })
+                        # External URL - download and convert to base64
+                        base64_data = await self._download_image(url)
+                        if base64_data:
+                            images.append({
+                                "data": base64_data,
+                                "detail": detail,
+                            })
+                        else:
+                            logger.warning(f"Failed to download image from {url}")
 
         return images
+
+    async def _download_image(self, url: str) -> Optional[str]:
+        """Download image from URL and return as base64 data URL."""
+        try:
+            from app.core.http_client import get_client
+            import base64
+            
+            async with get_client(timeout=30.0, follow_redirects=True) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    content_type = resp.headers.get("content-type", "image/png")
+                    base64_content = base64.b64encode(resp.content).decode("utf-8")
+                    return f"data:{content_type};base64,{base64_content}"
+        except Exception as e:
+            logger.error(f"Error downloading image from {url}: {e}")
+        return None
 
 
 class ToolCallProcessor(BaseProcessor):

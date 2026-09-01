@@ -19,12 +19,15 @@ async def parse_sse_stream(raw_stream):
 
     An SSE message consists of one or more lines with 'field: value' format,
     followed by a blank line (double newline).
+    Handles both \\n\\n and \\r\\n\\r\\n delimiters.
     """
 
     buffer = ""
 
     async for chunk in raw_stream:
-        # Normalize line endings
+        # Normalize line endings: handle bytes or str
+        if isinstance(chunk, bytes):
+            chunk = chunk.decode('utf-8', errors='replace')
         chunk = chunk.replace('\r\n', '\n')
         buffer += chunk
 

@@ -52,13 +52,23 @@ class EventSerializer:
             if event_type == "content_block_delta":
                 delta = event_data.get("delta", {})
                 text = delta.get("text", "")
+                input_json = delta.get("input_json", {})
+
+                # Handle tool call arguments
+                if tool_calls_started and current_tool_call_id:
+                    if input_json:
+                        current_tool_args += json.dumps(input_json, ensure_ascii=False)
+                        yield self._serialize_tool_calls_delta(
+                            current_tool_call_id, current_tool_name,
+                            json.dumps(input_json, ensure_ascii=False)
+                        )
+                    continue
 
                 if not text:
                     continue
 
-                # Check for tool call patterns in text
+                # Check for tool call patterns in text (XML-style)
                 if "<invoke " in text or "<atml:invoke" in text:
-                    # Tool call detected
                     continue
 
                 # Check if we're inside a tool call block
@@ -76,6 +86,7 @@ class EventSerializer:
                     tool_calls_started = True
                     current_tool_call_id = content_block.get("id")
                     current_tool_name = content_block.get("name")
+                    current_tool_args = ""
                     logger.debug(f"Tool call started: {current_tool_name}")
 
                 yield self._serialize_content_block_start(content_block)

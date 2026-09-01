@@ -43,6 +43,16 @@ class AuthProcessor(BaseProcessor):
         try:
             # Get an available account
             account = await account_manager.get_account_for_model(model)
+            
+            # Handle OAuth token refresh if needed
+            if account.oauth_token and account.oauth_token.is_expired():
+                logger.info(f"OAuth token expired, refreshing for {account.display_name}")
+                refreshed = await account.oauth_token.refresh()
+                if not refreshed:
+                    logger.warning(f"OAuth refresh failed for {account.display_name}, marking invalid")
+                    account.mark_invalid()
+                    raise NoAccountsAvailableError("OAuth token refresh failed")
+            
             context.account = account
             context.backend_type = self._determine_backend(account)
 

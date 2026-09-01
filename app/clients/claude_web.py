@@ -39,6 +39,7 @@ class ClaudeWebClient:
         self.account = account
         self.proxy = proxy or settings.proxy
         self._org_uuid: Optional[str] = None
+        self._last_message_uuid: Optional[str] = None  # For session resume
 
     @property
     def org_uuid(self) -> Optional[str]:
@@ -324,8 +325,13 @@ class ClaudeWebClient:
             "rendering_mode": rendering_mode,
             "timezone": timezone,
             "sync_sources": [],
-            "parent_message_uuid": "00000000-0000-4000-8000-000000000000",
         }
+
+        # Use parent_message_uuid if provided (for session resume)
+        if hasattr(self, '_last_message_uuid') and self._last_message_uuid:
+            payload["parent_message_uuid"] = self._last_message_uuid
+        else:
+            payload["parent_message_uuid"] = "00000000-0000-4000-8000-000000000000"
 
         if model and not model.startswith("claude-sonnet-4"):
             payload["model"] = model
@@ -362,8 +368,18 @@ class ClaudeWebClient:
             yield f"data: {json.dumps(error_event)}\n\n"
             return
 
-        # Stream SSE events
+        # Track last message UUID for session resume
         async for chunk in response.aiter_text():
+            # Extract message UUID from response if present
+            if chunk.startswith("data: ") and "message" in chunk:
+                try:
+                    data = json.loads(chunk[6:])
+                    if isinstance(data, dict) and data.get("type") == "message":
+                        msg_uuid = data.get("uuid")
+                        if msg_uuid:
+                            self._last_message_uuid = msg_uuid
+                except (json.JSONDecodeError, KeyError):
+                    pass
             yield chunk
 
     async def delete_conversation(self, conv_uuid: str) -> bool:

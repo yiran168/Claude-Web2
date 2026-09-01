@@ -51,6 +51,33 @@ class OAuthToken:
             expires_at=data["expires_at"],
         )
 
+    async def refresh(self) -> bool:
+        """
+        Refresh OAuth access token using refresh_token.
+        Returns True if refresh succeeded.
+        """
+        import httpx
+        
+        token_url = "https://claude.ai/oauth/token"
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(token_url, data={
+                    "grant_type": "refresh_token",
+                    "refresh_token": self.refresh_token,
+                    "client_id": "claude-web2",
+                    "scope": "accounts:api_key write:ai_feedback write:chat_conversation read:notify",
+                })
+                if resp.status_code == 200:
+                    data = resp.json()
+                    self.access_token = data["access_token"]
+                    self.expires_at = datetime.now(timezone.utc).timestamp() + data.get("expires_in", 3600)
+                    logger.info("OAuth token refreshed successfully")
+                    return True
+                logger.error(f"OAuth refresh failed: {resp.status_code}")
+        except Exception as e:
+            logger.error(f"OAuth refresh error: {e}")
+        return False
+
 
 @dataclass
 class Account:
@@ -100,6 +127,13 @@ class Account:
         if self.rate_limit_reset is None:
             return False
         return datetime.now(timezone.utc) < self.rate_limit_reset
+
+    async def handle_oauth_token(self):
+        """Refresh OAuth token if expired."""
+        if self.oauth_token and self.oauth_token.is_expired():
+            logger.info(f"Refreshing OAuth token for {self.display_name}")
+            return await self.oauth_token.refresh()
+        return True
 
     @property
     def is_available(self) -> bool:
