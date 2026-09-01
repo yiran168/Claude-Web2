@@ -1,61 +1,73 @@
 # Claude-Web2
 
-High-performance Claude.ai web-to-API proxy with OpenAI-compatible and Claude-native interfaces.
+> **Claude-Web2** — 现代化、高性能的 Claude.ai 网页代理，提供 OpenAI 兼容接口和 Claude 原生接口。
 
-## Features
+## 🌟 Features / 特色
 
-- **Dual API Compatibility**: OpenAI API format and native Anthropic API format
-- **Multi-Auth Support**: sessionKey (sk-ant-sid01-*), Cookies, OAuth
-- **SSE Streaming**: Full streaming with tool call support
-- **Tool Calling**: Full round-trip tool call conversion between OpenAI and Claude formats
-- **Image Uploads**: Support for base64 and URL images
-- **Account Load Balancing**: Round-robin with health tracking and failover
-- **Automatic Recovery**: Rate limit handling and account switching
-- **Cloudflare Bypass**: Uses curl-impersonate for reliable access
-- **Docker Ready**: Includes Dockerfile and docker-compose.yml
+| Feature | Status | Description |
+|---------|--------|-------------|
+| **Dual API** | ✅ | OpenAI + Claude native |
+| **Pipeline Architecture** | ✅ | 12-stage extensible processors |
+| **Multi-Auth** | ✅ | sessionKey + Cookie + OAuth2 |
+| **Load Balancing** | ✅ | Round-robin + health check |
+| **Auto Failover** | ✅ | Auto switch on 429/errors |
+| **SSE Streaming** | ✅ | Full OpenAI SSE format |
+| **Tool Calling** | ✅ | OpenAI ↔ Claude conversion |
+| **File Upload** | ✅ | base64 image + URL |
+| **CF Bypass** | ✅ | curl-impersonate |
+| **Session Mgmt** | ✅ | SQLite + TTL cleanup |
+| **Docker** | ✅ | One-click deploy |
+| **Admin API** | ✅ | Account + system management |
 
-## Quick Start
+## 🚀 Installation / 安装
+
+### Docker (Recommended)
 
 ```bash
-# Clone and setup
-git clone https://github.com/your-org/claude-web2.git
-cd claude-web2
-
-# Install
-pip install poetry
-poetry install
-
-# Configure
+git clone https://github.com/yiran168/Claude-Web2.git
+cd Claude-Web2
 cp .env.example .env
-# Edit .env to add your CLAUDE session keys
-
-# Run
-poetry run python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+docker-compose up -d
 ```
 
-## Usage
+### Poetry
 
-### OpenAI-compatible API
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+git clone https://github.com/yiran168/Claude-Web2.git
+cd Claude-Web2
+poetry install --only=main
+cp .env.example .env
+poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+### From Source
+
+```bash
+pip install poetry
+git clone https://github.com/yiran168/Claude-Web2.git
+cd Claude-Web2
+poetry install
+poetry shell
+python -m uvicorn app.main:app --reload
+```
+
+## 📖 Usage / 使用
+
+### OpenAI API
 
 ```bash
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-5-sonnet",
-    "messages": [{"role": "user", "content": "Hello!"}],
-    "stream": true
-  }'
+  -d '{"model":"claude-3-5-sonnet","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-### Claude-native API
+### Claude Native API
 
 ```bash
 curl http://localhost:8000/messages \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-5-sonnet-20241022",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'
+  -d '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 ### Tool Calling
@@ -63,96 +75,20 @@ curl http://localhost:8000/messages \
 ```bash
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-5-sonnet",
-    "messages": [{"role": "user", "content": "What is the weather in Tokyo?"}],
-    "tools": [{
-      "type": "function",
-      "function": {
-        "name": "get_weather",
-        "description": "Get weather info",
-        "parameters": {
-          "type": "object",
-          "properties": {"location": {"type": "string"}},
-          "required": ["location"]
-        }
-      }
-    }],
-    "tool_choice": "auto"
-  }'
+  -d '{"model":"claude-3-5-sonnet","messages":[{"role":"user","content":"Weather in Tokyo?"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}}}]}'
 ```
 
-### Tool Result (Session Resume)
+## 📊 Comparison / 对比
 
-```bash
-curl http://localhost:8000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "claude-3-5-sonnet",
-    "messages": [
-      {"role": "user", "content": "What is the weather in Tokyo?"},
-      {"role": "assistant", "content": "", "tool_calls": [{"id": "call_abc123", "type": "function", "function": {"name": "get_weather", "arguments": "{\"location\":\"Tokyo\"}"}}]},
-      {"role": "tool", "content": "{\"temperature\": 22, \"condition\": \"sunny\"}", "tool_call_id": "call_abc123"}
-    ],
-    "tools": [...],
-    "tool_choice": "auto"
-  }'
-```
+| Feature | clove | Chat2API | Claude2api | **Claude-Web2** |
+|---------|-------|----------|------------|-----------------|
+| Dual API | ❌ | ✅ | ✅ | ✅ |
+| Pipeline | ✅ | ❌ | ❌ | ✅ |
+| Load Balancing | ❌ | ✅ | ❌ | ✅ |
+| Auto Failover | ❌ | ❌ | ❌ | ✅ |
+| CF Bypass | curl_cffi | ❌ | ❌ | curl-impersonate |
+| Extensibility | ⭐⭐ | ⭐⭐ | ⭐ | ⭐⭐⭐⭐⭐ |
 
-## Configuration
-
-| Variable          | Description                          | Default      |
-|-------------------|--------------------------------------|--------------|
-| `SESSIONS`        | Claude session keys (one per line)   | -            |
-| `COOKIES`         | Claude.ai cookies                    | -            |
-| `OAUTH_TOKENS`    | OAuth token pairs                    | -            |
-| `PROXY`           | HTTP/SOCKS proxy for requests        | -            |
-| `DEFAULT_MODEL`   | Default Claude model                 | claude-3-5-sonnet-20241022 |
-| `RETRY_ATTEMPTS`  | Max retry attempts                   | 3            |
-| `SESSION_TIMEOUT` | Session idle timeout (seconds)       | 600          |
-
-## Architecture
-
-```
-Client
-   │
-   ▼
-FastAPI App
-   │
-   ▼
-ClaudeAIPipeline  ───► [AuthProcessor]      ── account selection
-                      [FormatProcessor]    ── OpenAI → Claude format
-                      [SessionProcessor]   ── create/reuse session
-                      [ClaudeWebProcessor] ── send to claude.ai
-                      [EventParsingProcessor] ── parse SSE
-                      [ToolCallProcessor]    ── handle tool calls
-                      [MessageCollector]   ── collect response
-                      [StreamingResponseProcessor]
-                      [NonStreamingResponseProcessor]
-```
-
-### Processors
-
-Each processor in the pipeline follows the `BaseProcessor` interface:
-
-```python
-class MyProcessor(BaseProcessor):
-    async def process(self, context: ClaudeAIContext) -> ClaudeAIContext:
-        # Process the request
-        return context
-```
-
-### Backends
-
-- `claude_web.py` — Claude.ai web API (primary, most reliable)
-- `base.py` — Native Anthropic API (OAuth accounts)
-
-## Docker
-
-```bash
-docker-compose up -d
-```
-
-## License
+## 🔧 License
 
 MIT

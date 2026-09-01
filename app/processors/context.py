@@ -6,7 +6,7 @@ from fastapi import Request
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from app.processors.base import BaseContext
-from app.models.claude import ClaudeMessageRequest
+from app.models.claude import MessagesAPIRequest
 from app.models.internal import ClaudeWebRequest, RequestContext
 
 
@@ -25,7 +25,7 @@ class ClaudeAIContext(BaseContext):
 
     # Request data
     openai_request: Optional[Dict[str, Any]] = None
-    messages_request: Optional[ClaudeMessageRequest] = None
+    messages_api_request: Optional[object] = None  # MessagesAPIRequest or ClaudeMessageRequest
     claude_web_request: Optional[ClaudeWebRequest] = None
     request_context: Optional[RequestContext] = None
 

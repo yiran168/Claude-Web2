@@ -45,9 +45,6 @@ class AccountManager:
         self._current_index = 0
         self._check_interval = settings.account_check_interval
 
-        # Initialize accounts from config
-        asyncio.create_task(self._init_from_config())
-
         logger.info("AccountManager initialized")
 
     def _get_lock(self) -> asyncio.Lock:

@@ -11,7 +11,7 @@ readme = "README.md"
 license = "MIT"
 keywords = ["claude", "ai", "proxy", "openai", "anthropic", "web2api"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.12",

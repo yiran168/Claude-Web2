@@ -54,7 +54,7 @@ class MessageCollectorProcessor(BaseProcessor):
             return context
 
         # For non-streaming requests, we need to consume the stream
-        if not context.messages_request or not context.messages_request.stream:
+        if not context.messages_api_request or not context.messages_api_request.stream:
             context.event_stream = self._collect_non_streaming(
                 context.event_stream, context
             )
@@ -245,7 +245,7 @@ class StreamingResponseProcessor(BaseProcessor):
             return context
 
         # Check if this is a streaming request
-        if not context.messages_request or not context.messages_request.stream:
+        if not context.messages_api_request or not context.messages_api_request.stream:
             logger.debug("Skipping StreamingResponseProcessor - non-streaming request")
             return context
 
@@ -289,7 +289,7 @@ class NonStreamingResponseProcessor(BaseProcessor):
             logger.debug("Skipping NonStreamingResponseProcessor - response already set")
             return context
 
-        if context.messages_request and context.messages_request.stream:
+        if context.messages_api_request and context.messages_api_request.stream:
             logger.debug("Skipping NonStreamingResponseProcessor - streaming request")
             return context
 
