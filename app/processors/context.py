@@ -32,6 +32,7 @@ class ClaudeAIContext(BaseContext):
     # Backend and client info
     account: Optional[Any] = None
     claude_client: Optional[Any] = None
+    claude_session: Optional[Any] = None  # ClaudeWebSession instance
     backend_type: str = "web"  # "web", "api", or "cli"
 
     # Streaming
