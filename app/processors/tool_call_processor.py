@@ -93,8 +93,8 @@ class ToolCallEventProcessor(BaseProcessor):
                             text = delta.get("text", "")
                             text_buffer += text
 
-                            # Check if this is a tool call invocation
-                            if "<invoke " in text or "<atml:invoke" in text:
+                            # Check if this is a tool call invocation (support both \x08antml: and atml: formats)
+                            if "<invoke " in text or "<atml:invoke" in text or "<\x08antml:invoke" in text:
                                 # Parse tool calls from the buffered text
                                 tool_calls = parse_tool_calls_from_text(
                                     text_buffer + text

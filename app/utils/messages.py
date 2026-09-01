@@ -103,11 +103,15 @@ def format_tools_for_claude(tools: List[Dict[str, Any]]) -> str:
 
 
 def format_tool_call_native(name: str, args: Dict[str, Any]) -> str:
-    """Convert tool name + args dict to Claude's native XML format."""
-    parts = [f'<invoke name="{name}">']
+    """Convert tool name + args dict to Claude's native XML format.
+
+    Uses \\x08antml: prefix for tool tags, which is the correct format
+    for the Claude Web API to properly recognize tool calls.
+    """
+    parts = [f'<\x08antml:invoke name="{name}">']
     for k, v in args.items():
-        parts.append(f'<parameter name="{k}">{v}</parameter>')
-    parts.append("</invoke>")
+        parts.append(f'<\x08antml:parameter name="{k}">{v}</\x08antml:parameter>')
+    parts.append("</\x08antml:invoke>")
     return "\n".join(parts)
 
 
@@ -241,13 +245,14 @@ def format_prompt(
 
 
 def parse_tool_calls_from_text(text: str) -> Optional[List[Dict[str, Any]]]:
-    """
-    Parse Claude's tool call XML from text into OpenAI tool_calls list.
+    """Parse Claude's tool call XML from text into OpenAI tool_calls list.
 
     Handles multiple formats:
-    1. <invoke name="X"><parameter name="Y">Z</parameter></invoke>
+    1. <antml:invoke name="X"><antml:parameter name="Y">Z</antml:parameter></antml:invoke>
+       (with \\x08 backspace prefix for Claude Web API)
     2. <atml:invoke name="X">...<atml:parameter name="Y">Z</atml:parameter>...</atml:invoke>
-    3. Simple format fallback
+    3. <invoke name="X"><parameter name="Y">Z</parameter></invoke>
+    4. Simple format <invoke tool="X">\nARGS_JSON\n</invoke>
 
     Args:
         text: The response text containing tool calls
@@ -257,17 +262,23 @@ def parse_tool_calls_from_text(text: str) -> Optional[List[Dict[str, Any]]]:
     """
     calls = []
 
-    # Pattern 1: <invoke name="X"><parameter name="Y">Z</parameter></invoke>
+    # Pattern 1: <antml:invoke name="X"><antml:parameter name="Y">Z</antml:parameter></antml:invoke>
+    # Also support \x08antml: prefix variant
     invoke_re = re.compile(
-        r'<invoke name="([^"]+)">(.*?)(?:</invoke>|$)',
+        r'(?:\\x08antml:|atml:|invoke\s+name="([^"]+)"[^>]*>)([^<]*)(?:</antml:invoke>|</invoke>|$)',
+        re.DOTALL
+    )
+    # More comprehensive pattern for antml:invoke
+    antml_invoke_re = re.compile(
+        r'<(?:\\x08antml:|atml:|)invoke\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\\x08antml:|atml:|)invoke>|$)',
         re.DOTALL
     )
     param_re = re.compile(
-        r'<parameter name="([^"]+)">(.*?)(?:</parameter>|$)',
+        r'<(?:\\x08antml:|atml:|)parameter\s+name="([^"]+)"[^>]*>(.*?)(?:</(?:\\x08antml:|atml:|)parameter>|$)',
         re.DOTALL
     )
 
-    for match in invoke_re.finditer(text):
+    for match in antml_invoke_re.finditer(text):
         name = match.group(1)
         params_body = match.group(2)
         args = {}
@@ -289,30 +300,34 @@ def parse_tool_calls_from_text(text: str) -> Optional[List[Dict[str, Any]]]:
     if calls:
         return calls
 
-    # Pattern 2: <atml:invoke name="X">...<atml:parameter name="Y">Z</atml:parameter>...</atml:invoke>
-    for match in re.finditer(r'<atml:invoke\s+name="([^"]+)"\s*>', text):
+    # Pattern 2: <invoke name="X"><parameter name="Y">Z</parameter></invoke>
+    invoke_re = re.compile(
+        r'<invoke\s+name="([^"]+)">(.*?)(?:</invoke>|$)',
+        re.DOTALL
+    )
+    param_re = re.compile(
+        r'<parameter\s+name="([^"]+)">(.*?)(?:</parameter>|$)',
+        re.DOTALL
+    )
+
+    for match in invoke_re.finditer(text):
         name = match.group(1)
-        rest = text[match.end():]
-        end_match = re.search(r'</atml:invoke>', rest)
+        params_body = match.group(2)
+        args = {}
 
-        if not end_match:
-            continue
+        for param_match in param_re.finditer(params_body):
+            val = param_match.group(2).strip()
+            if val:
+                args[param_match.group(1)] = val
 
-        body = rest[:end_match.start()]
-        params = {}
-
-        for param_match in re.finditer(r'<atml:parameter\s+name="([^"]+)"\s*>([^<]*)</atml:parameter>', body):
-            params[param_match.group(1)] = param_match.group(2)
-
-        if params:
-            calls.append({
-                "id": f"call_{__import__('uuid').uuid4().hex[:12]}",
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "arguments": json.dumps(params)
-                }
-            })
+        calls.append({
+            "id": f"call_{__import__('uuid').uuid4().hex[:12]}",
+            "type": "function",
+            "function": {
+                "name": name,
+                "arguments": json.dumps(args, ensure_ascii=False)
+            }
+        })
 
     if calls:
         return calls

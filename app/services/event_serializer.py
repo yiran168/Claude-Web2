@@ -31,21 +31,38 @@ class EventSerializer:
         yield self._serialize_message_start()
 
         tool_calls_started = False
+        tool_calls_first_chunk = False
         current_tool_call_id = None
         current_tool_name = None
         current_tool_args = ""
 
         async for event in event_stream:
-            event_type = getattr(event, 'event_type', None) or event.get('type') if isinstance(event, dict) else None
-            data = getattr(event, 'data', None) or event.get('data')
+            # Handle both pydantic RootModel and dict-based events
+            if isinstance(event, dict):
+                event_type = event.get('type')
+                event_data = event.get('data', event)
+            elif hasattr(event, 'root'):
+                # Pydantic RootModel - access via root attribute
+                root = event.root
+                if hasattr(root, 'type'):
+                    event_type = root.type
+                else:
+                    event_type = root.get('type') if isinstance(root, dict) else 'unknown'
+                # Get data from root (may be the root itself for UnknownEvent)
+                event_data = root.model_dump() if hasattr(root, 'model_dump') else (dict(root) if hasattr(root, '__dict__') else root)
+            else:
+                event_type = getattr(event, 'event_type', None)
+                event_data = getattr(event, 'data', None)
 
-            if not data:
+            if not event_data or not event_type:
                 continue
 
             try:
-                event_data = json.loads(data) if isinstance(data, str) else data
+                # event_data may already be a dict or could be a JSON string
+                if isinstance(event_data, str):
+                    event_data = json.loads(event_data)
             except json.JSONDecodeError:
-                logger.debug(f"Could not parse event data: {data[:100]}")
+                logger.debug(f"Could not parse event data: {str(event_data)[:100]}")
                 continue
 
             # Handle content block deltas
@@ -62,15 +79,17 @@ class EventSerializer:
                         current_tool_args += raw_str
                         yield self._serialize_tool_calls_delta(
                             current_tool_call_id, current_tool_name,
-                            raw_str  # Pass raw string, not re-serialized
+                            raw_str, is_first=tool_calls_first_chunk
                         )
+                        tool_calls_first_chunk = False
                     continue
 
                 if not text:
                     continue
 
                 # Check for tool call patterns in text (XML-style)
-                if "<invoke " in text or "<atml:invoke" in text:
+                # Support both plain <invoke and \x08antml:invoke and atml:invoke formats
+                if "<invoke " in text or "<atml:invoke" in text or "<\x08antml:invoke" in text:
                     continue
 
                 # Check if we're inside a tool call block
@@ -86,6 +105,7 @@ class EventSerializer:
 
                 if block_type == "tool_use":
                     tool_calls_started = True
+                    tool_calls_first_chunk = True
                     current_tool_call_id = content_block.get("id")
                     current_tool_name = content_block.get("name")
                     current_tool_args = ""
@@ -187,9 +207,29 @@ class EventSerializer:
         return serialize_openai_sse_event(event)
 
     def _serialize_tool_calls_delta(
-        self, tool_call_id: str, name: str, args: str
+        self, tool_call_id: str, name: str, args: str, is_first: bool = True
     ) -> str:
-        """Serialize tool call delta."""
+        """Serialize tool call delta.
+
+        Per OpenAI spec:
+        - First chunk includes id, type, and function.name
+        - Subsequent chunks only include function.arguments (partial_json)
+        """
+        tool_call_obj = {"index": 0}
+
+        if is_first:
+            tool_call_obj["id"] = tool_call_id
+            tool_call_obj["type"] = "function"
+            tool_call_obj["function"] = {
+                "name": name,
+                "arguments": args,
+            }
+        else:
+            # Subsequent chunks: only arguments
+            tool_call_obj["function"] = {
+                "arguments": args,
+            }
+
         event = {
             "id": self._generate_id(),
             "object": "chat.completion.chunk",
@@ -199,17 +239,7 @@ class EventSerializer:
                 {
                     "index": 0,
                     "delta": {
-                        "tool_calls": [
-                            {
-                                "index": 0,
-                                "id": tool_call_id,
-                                "type": "function",
-                                "function": {
-                                    "name": name,
-                                    "arguments": args,
-                                },
-                            }
-                        ]
+                        "tool_calls": [tool_call_obj]
                     },
                     "finish_reason": None,
                 }

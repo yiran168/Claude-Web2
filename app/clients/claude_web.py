@@ -382,6 +382,53 @@ class ClaudeWebClient:
                     pass
             yield chunk
 
+    async def send_tool_result(
+        self,
+        conv_uuid: str,
+        tool_use_id: str,
+        tool_name: str,
+        tool_result: str,
+    ) -> bool:
+        """
+        Send a tool result back to Claude.ai.
+
+        Args:
+            conv_uuid: Conversation UUID
+            tool_use_id: The tool use ID from the tool call
+            tool_name: The name of the tool that was called
+            tool_result: The result string from the tool
+
+        Returns:
+            True if successful, False otherwise
+        """
+        org_uuid = self.org_uuid
+        if not org_uuid:
+            logger.error("No organization UUID available for tool result")
+            return False
+
+        url = f"/api/organizations/{org_uuid}/chat_conversations/{conv_uuid}/tool_result"
+
+        payload = {
+            "uuid": tool_use_id,
+            "tool_name": tool_name,
+            "result": tool_result,
+        }
+
+        try:
+            response = await self._request(
+                "POST", url,
+                json_data=payload,
+                timeout=30.0,
+                conv_uuid=conv_uuid,
+            )
+            success = response.status_code == 200
+            if not success:
+                logger.error(f"Tool result failed: {response.status_code}")
+            return success
+        except Exception as e:
+            logger.error(f"Error sending tool result: {e}")
+            return False
+
     async def delete_conversation(self, conv_uuid: str) -> bool:
         """
         Delete a chat conversation.

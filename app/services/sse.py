@@ -89,6 +89,9 @@ def serialize_openai_sse_event(
     """
     Serialize a data payload as an OpenAI-compatible SSE event.
 
+    Each line of the JSON data gets its own 'data:' prefix, following
+    the SSE specification for multi-line data fields.
+
     Args:
         data: The event data payload
         event_type: Optional event type (e.g., 'error')
@@ -101,7 +104,9 @@ def serialize_openai_sse_event(
     if event_type:
         lines.append(f"event: {event_type}")
 
-    lines.append(f"data: {json.dumps(data, ensure_ascii=False)}")
+    json_str = json.dumps(data, ensure_ascii=False)
+    for line in json_str.split("\n"):
+        lines.append(f"data: {line}")
     lines.append("")
     lines.append("")
 

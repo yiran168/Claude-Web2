@@ -57,23 +57,30 @@ class OAuthToken:
         Returns True if refresh succeeded.
         """
         import httpx
-        
-        token_url = "https://claude.ai/api/oauth/token"  # Correct endpoint from clove reference
+
+        token_url = "https://claude.ai/api/oauth/token"
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(token_url, data={
                     "grant_type": "refresh_token",
                     "refresh_token": self.refresh_token,
-                    "client_id": "claude-web2",
-                    "scope": "accounts:api_key write:ai_feedback write:chat_conversation read:notify",
+                    "client_id": "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+                    "scope": "accounts:app:*  user:profile  user:inference  user:notification  user:account  user:organization  user:workspace:* user:chat_conversation  user:message  user:attachment  user:document  user:image  user:video  user:audio  user:code_interpreter  user:artifact  user:tool_use  user:tool_result  user:cache  user:history  user:settings  user:integrations  user:ai_feedback  user:notify  user:presets  user:sessions  user:files  user:uploads  user:workflows  user:automation  user:automations  user:tasks  user:task  user:projects  user:project  user:comments  user:comment  user:notifications  user:notification  user:search  user:bookmarks  user:preferences  user:preferences  user:settings  user:settings  user:settings",
+                }, headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "claude-web2/1.0.0",
                 })
                 if resp.status_code == 200:
                     data = resp.json()
                     self.access_token = data["access_token"]
                     self.expires_at = datetime.now(timezone.utc).timestamp() + data.get("expires_in", 3600)
+                    if data.get("refresh_token"):
+                        self.refresh_token = data["refresh_token"]
                     logger.info("OAuth token refreshed successfully")
                     return True
-                logger.error(f"OAuth refresh failed: {resp.status_code}")
+                logger.error(f"OAuth refresh failed: {resp.status_code} - {resp.text[:200]}")
+                if resp.status_code in (401, 403):
+                    self.refresh_token = None
         except Exception as e:
             logger.error(f"OAuth refresh error: {e}")
         return False

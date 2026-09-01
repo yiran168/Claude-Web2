@@ -1,11 +1,16 @@
 """SSE event parsing from Claude streams."""
 
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Dict, Any
 import json
 
 from loguru import logger
 
-from app.models.streaming import StreamingEvent
+try:
+    from pydantic import ValidationError
+except ImportError:
+    ValidationError = None
+
+from app.models.streaming import StreamingEvent, UnknownEvent
 from app.services.sse import parse_sse_stream, parse_sse_event_data
 
 
@@ -23,15 +28,15 @@ class EventParser:
 
     async def parse_stream(
         self, raw_stream: AsyncIterator[str]
-    ) -> AsyncIterator[StreamingEvent]:
+    ) -> AsyncIterator[Any]:
         """
-        Parse an SSE stream and yield StreamingEvent objects.
+        Parse an SSE stream and yield event objects.
 
         Args:
             raw_stream: AsyncIterator yielding string chunks from the SSE stream
 
         Yields:
-            StreamingEvent objects parsed from the stream
+            StreamingEvent objects (or dicts) parsed from the stream
         """
         async for message in parse_sse_stream(raw_stream):
             if not message.data:
@@ -39,7 +44,7 @@ class EventParser:
 
             event = self._create_event(message.event, message.data)
             if event:
-                logger.debug(f"Parsed event: type={event.event_type}")
+                logger.debug(f"Parsed event: type={getattr(event, 'event_type', None)}")
                 yield event
 
     def _create_event(self, event_type: Optional[str], data: str) -> Optional[StreamingEvent]:
@@ -48,7 +53,7 @@ class EventParser:
 
         Args:
             event_type: The SSE event type
-            data: The raw data string
+            data: The raw data string (JSON)
 
         Returns:
             StreamingEvent object or None if parsing fails
@@ -65,7 +70,17 @@ class EventParser:
             if isinstance(parsed_data, dict):
                 event_type = parsed_data.get("type", "unknown")
 
-        return StreamingEvent(
-            event_type=event_type,
-            data=parsed_data,
-        )
+        try:
+            # Use RootModel pattern: StreamingEvent(root=data)
+            # The pydantic RootModel will validate and pick the right event type
+            return StreamingEvent(root=parsed_data)
+        except Exception as e:
+            if ValidationError is not None and isinstance(e, ValidationError):
+                logger.debug(f"ValidationError parsing event: {e}")
+            else:
+                logger.debug(f"Failed to create StreamingEvent: {e}")
+
+            # Fallback: create an UnknownEvent for compatibility
+            if self.skip_unknown_events:
+                return None
+            return StreamingEvent(root=UnknownEvent(type=event_type, data=parsed_data))
