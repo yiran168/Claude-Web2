@@ -22,6 +22,9 @@ COPY env.py ./
 COPY gunicorn_conf.py ./
 COPY .env.example ./
 
+# Copy frontend static files
+COPY static/ ./static/
+
 # Create data directory
 RUN mkdir -p /app/data
 
