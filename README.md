@@ -1,8 +1,10 @@
 # Claude-Web2
 
-> **Claude-Web2** — 现代化、高性能的 Claude.ai 网页代理，提供 OpenAI 兼容接口和 Claude 原生接口。
+> **Claude-Web2** — A modern, high-performance Claude.ai web proxy with OpenAI-compatible and native Claude APIs.
 
-## 🌟 Features / 特色
+[English](README.md) | [中文](README.zh.md)
+
+## 🌟 Features
 
 | Feature | Status | Description |
 |---------|--------|-------------|
@@ -19,143 +21,129 @@
 | **Docker** | ✅ | One-click deploy |
 | **Admin API** | ✅ | Account + system management |
 
-## 🚀 Installation / 安装
+## 🚀 Installation
 
-### Prerequisites / 前提条件
+### Prerequisites
 
-- Python 3.10+ (3.12 recommended) / Python 3.10+（推荐 3.12）
-- Docker & Docker Compose (推荐) / Docker & Docker Compose (recommended)
-- Poetry (可选) / Poetry (optional, for local development)
-- [Claude.ai](https://claude.ai) account with active session / Claude.ai 账户
+- Python 3.10+ (3.12 recommended)
+- Docker & Docker Compose (recommended)
+- Poetry (optional, for local development)
+- [Claude.ai](https://claude.ai) account with active session
 
-### Option 1: Docker (Recommended) / 选项 1: Docker（推荐）
+### Option 1: Docker (Recommended)
 
 Docker compose is the fastest way to get started. The service will run on `http://localhost:8000`.
 
-Docker Compose 是最快速的启动方式，服务将在 `http://localhost:8000` 运行。
-
 ```bash
-# Clone the repository / 克隆仓库
+# Clone the repository
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# Copy environment configuration / 复制环境配置
+# Copy environment configuration
 cp .env.example .env
 
-# Edit .env to add your Claude session token / 编辑 .env 添加你的 Claude 会话令牌
-# See "Configuration" section below for details / 详情见下文"配置"部分
+# Edit .env to add your Claude session token
+# See "Configuration" section below for details
 
-# Build and start the service / 构建并启动服务
+# Build and start the service
 docker-compose up -d
 
-# Check status / 检查状态
+# Check status
 docker-compose ps
 ```
 
 The API will be available at `http://localhost:8000`.
 
-API 将在 `http://localhost:8000` 可用。
-
-### Option 2: Poetry (Development) / 选项 2: Poetry（开发）
+### Option 2: Poetry (Development)
 
 For local development and debugging:
 
-用于本地开发和调试：
-
 ```bash
-# Install Poetry / 安装 Poetry
+# Install Poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
-# Clone the repository / 克隆仓库
+# Clone the repository
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# Install dependencies / 安装依赖
+# Install dependencies
 poetry install --only=main
 
-# Copy environment configuration / 复制环境配置
+# Copy environment configuration
 cp .env.example .env
 
-# Edit .env to add your Claude session token / 编辑 .env 添加你的 Claude 会话令牌
-# See "Configuration" section below for details / 详情见下文"配置"部分
+# Edit .env to add your Claude session token
 
-# Start the server / 启动服务器
+# Start the server
 poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-### Option 3: From Source (Development) / 选项 3: 从源码（开发）
+### Option 3: From Source (Development)
 
 For full development setup with all features:
 
-用于完整的开发环境（包含所有依赖）：
-
 ```bash
-# Install Poetry / 安装 Poetry
+# Install Poetry
 pip install poetry
 
-# Clone the repository / 克隆仓库
+# Clone the repository
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# Install all dependencies including dev tools / 安装所有依赖（包括开发工具）
+# Install all dependencies including dev tools
 poetry install
 
-# Activate virtual environment / 激活虚拟环境
+# Activate virtual environment
 poetry shell
 
-# Copy environment configuration / 复制环境配置
+# Copy environment configuration
 cp .env.example .env
 
-# Edit .env to add your Claude session token / 编辑 .env 添加你的 Claude 会话令牌
+# Edit .env to add your Claude session token
 
-# Start with hot reload for development / 启用热重载（开发模式）
+# Start with hot reload for development
 python -m uvicorn app.main:app --reload
 ```
 
-### Configuration / 配置
+### Configuration
 
 After copying `.env.example` to `.env`, edit it with your Claude session information:
 
-复制 `.env.example` 到 `.env` 后，编辑以添加你的 Claude 会话信息：
-
 ```bash
 # Required: Get this from your Claude.ai session cookie
-# 必填: 从 Claude.ai 会话 Cookie 中获取
 
-# Method 1: Direct session key (from cookie) / 方法 1: 直接会话密钥（来自 Cookie）
+# Method 1: Direct session key (from cookie)
 CLAUDE_SESSION_KEY=your_session_key_here
 
-# Method 2: Full cookie string / 方法 2: 完整的 Cookie 字符串
+# Method 2: Full cookie string
 # CLAUDE_COOKIES="sessionKey=xxx; other_cookie=yyy"
 
-# Method 3: OAuth token (for enterprise) / 方法 3: OAuth 令牌（企业版）
+# Method 3: OAuth token (for enterprise)
 # CLAUDE_OAUTH_TOKEN=your_oauth_token_here
 ```
 
-### Verifying Installation / 验证安装
+### Verifying Installation
 
 After installation, verify the service is running:
 
-安装后，验证服务是否正常运行：
-
 ```bash
-# Health check / 健康检查
+# Health check
 curl http://localhost:8000/health
 
-# Expected response / 期望响应:
+# Expected response:
 # {"status": "healthy"}
 ```
 
-### Environment Variables / 环境变量
+### Environment Variables
 
-| Variable | Required | Default | Description | 描述 |
-|----------|----------|---------|-------------|------|
-| `CLAUDE_SESSION_KEY` | Yes | - | Claude.ai session key | Claude.ai 会话密钥 |
-| `PORT` | No | `8000` | Server port | 服务器端口 |
-| `HOST` | No | `0.0.0.0` | Server host | 服务器主机 |
-| `LOG_LEVEL` | No | `INFO` | Logging level | 日志级别 |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `CLAUDE_SESSION_KEY` | Yes | - | Claude.ai session key |
+| `PORT` | No | `8000` | Server port |
+| `HOST` | No | `0.0.0.0` | Server host |
+| `LOG_LEVEL` | No | `INFO` | Logging level |
 
-## 📖 Usage / 使用
+## 📖 Usage
 
 ### OpenAI API
 
@@ -181,7 +169,7 @@ curl http://localhost:8000/v1/chat/completions \
   -d '{"model":"claude-3-5-sonnet","messages":[{"role":"user","content":"Weather in Tokyo?"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"Get weather","parameters":{"type":"object","properties":{"location":{"type":"string"}}}}]}'
 ```
 
-## 📊 Comparison / 对比
+## 📊 Comparison
 
 | Feature | clove | Chat2API | Claude2api | **Claude-Web2** |
 |---------|-------|----------|------------|-----------------|
