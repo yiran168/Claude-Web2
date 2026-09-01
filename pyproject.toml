@@ -9,6 +9,7 @@ description = "High-performance Claude.ai web-to-API proxy with OpenAI-compatibl
 authors = ["OpenHands <openhands@all-hands.dev>"]
 readme = "README.md"
 license = "MIT"
+packages = [{include = "app"}]
 keywords = ["claude", "ai", "proxy", "openai", "anthropic", "web2api"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

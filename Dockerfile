@@ -12,13 +12,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY pyproject.toml ./
-COPY README.md ./
+# Copy requirements and source code first (needed for poetry install to find packages)
+COPY pyproject.toml README.md ./
+COPY app/ ./app/
 RUN pip install --no-cache-dir poetry && poetry config virtualenvs.create false && poetry install --only=main
 
-# Copy source code
-COPY app/ ./app/
+# Copy remaining source files
 COPY env.py ./
 COPY gunicorn_conf.py ./
 COPY .env.example ./
