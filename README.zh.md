@@ -25,84 +25,92 @@
 
 ### 前提条件
 
-- Python 3.10+（推荐 3.12）
+- Python 3.12+
 - Docker & Docker Compose（推荐）
-- Poetry（可选，用于本地开发）
 - [Claude.ai](https://claude.ai) 账户
+- 有效的会话密钥或 OAuth 令牌
 
-### 选项 1: Docker（推荐）
+### 选项 1: Docker 部署（推荐）
 
-Docker Compose 是最快速的启动方式，服务将在 `http://localhost:8000` 运行。
+#### 部署到 VPS
+
+Docker Compose 是最快速的启动方式。
 
 ```bash
-# 克隆仓库
+# 1. 克隆仓库
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# 复制环境配置
+# 2. 复制环境配置
 cp .env.example .env
 
-# 编辑 .env 添加你的 Claude 会话令牌
-# 详情见下文"配置"部分
+# 3. 编辑 .env 文件（本地部署请见下文）
+vim .env
 
-# 构建并启动服务
+# 4. 构建并启动服务
 docker-compose up -d
 
-# 检查状态
+# 5. 检查状态
 docker-compose ps
+
+# 6. 查看日志
+docker-compose logs -f
 ```
 
-API 将在 `http://localhost:8000` 可用。
+**VPS 部署注意事项:**
+- 确保防火墙已开放 8088 端口 (`ufw allow 8088`)
+- 服务将在 `http://[VPS-IP]:8088` 可用
+- 建议配置域名反向代理 (Caddy/Nginx)
 
-### 选项 2: Poetry（开发）
-
-用于本地开发和调试：
+#### 本地部署
 
 ```bash
-# 安装 Poetry
-curl -sSL https://install.python-poetry.org | python3 -
-
-# 克隆仓库
+# 1. 克隆仓库
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# 安装依赖
-poetry install --only=main
-
-# 复制环境配置
+# 2. 复制环境配置  
 cp .env.example .env
 
-# 编辑 .env 添加你的 Claude 会话令牌
+# 3. 编辑 .env 文件
+# 将 SESSIONS 字段设置为你的 Claude.ai 会话密钥列表
+# 格式: ["sk-ant-sid01-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
 
-# 启动服务器
-poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000
+# 4. 构建并启动
+docker-compose up -d
+
+# 5. 访问前端界面
+http://localhost:8088
 ```
 
-### 选项 3: 从源码（开发）
+**本地 vs VPS 区别:**
+| 项目 | 本地部署 | VPS 部署 |
+|------|----------|----------|
+| 访问地址 | `http://localhost:8088` | `http://[VPS-IP]:8088` |
+| 防火墙 | 无需配置 | 需要开放 8088 端口 |
+| 域名 | 不需要 | 可选配置反向代理 |
+| 外部访问 | 否 | 是 |
 
-用于完整的开发环境（包含所有依赖）：
+### 选项 2: 直接运行
 
 ```bash
-# 安装 Poetry
-pip install poetry
-
-# 克隆仓库
+# 1. 克隆仓库
 git clone https://github.com/yiran168/Claude-Web2.git
 cd Claude-Web2
 
-# 安装所有依赖（包括开发工具）
-poetry install
+# 2. 安装依赖
+pip install -r requirements.txt
 
-# 激活虚拟环境
-poetry shell
-
-# 复制环境配置
+# 3. 复制环境配置
 cp .env.example .env
 
-# 编辑 .env 添加你的 Claude 会话令牌
+# 4. 编辑 .env 添加你的会话信息
 
-# 启用热重载（开发模式）
-python -m uvicorn app.main:app --reload
+# 5. 启动服务
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8088
+
+# 6. 访问前端
+http://localhost:8088
 ```
 
 ### 配置
@@ -110,27 +118,39 @@ python -m uvicorn app.main:app --reload
 复制 `.env.example` 到 `.env` 后，编辑以添加你的 Claude 会话信息：
 
 ```bash
-# 必填: 从 Claude.ai 会话 Cookie 中获取
+# 必填: 从 Claude.ai 获取会话密钥
 
-# 方法 1: 直接会话密钥（来自 Cookie）
-CLAUDE_SESSION_KEY=your_session_key_here
+# 方法 1: 会话密钥列表 (JSON 数组格式)
+SESSIONS=["sk-ant-sid01-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
 
-# 方法 2: 完整的 Cookie 字符串
-# CLAUDE_COOKIES="sessionKey=xxx; other_cookie=yyy"
+# 方法 2: OAuth 令牌列表 (JSON 数组格式)
+# OAUTH_TOKENS=[{"access_token":"xxx","refresh_token":"yyy","expires_at":1234567890}]
 
-# 方法 3: OAuth 令牌（企业版）
-# CLAUDE_OAUTH_TOKEN=your_oauth_token_here
+# 方法 3: Cookie 字符串列表 (JSON 数组格式)
+# COOKIES=[{"claude.ai": [{"name": "sessionKey", "value": "xxx"}]}]
+
+# 可选: API 密钥认证
+API_KEY=your-api-key-here
+
+# 服务器设置
+HOST=0.0.0.0
+PORT=8088
 ```
+
+#### 获取 Claude.ai 会话密钥
+
+1. 打开浏览器，登录 [claude.ai](https://claude.ai)
+2. 按 `F12` 打开开发者工具
+3. 在 **Application → Cookies** 中找到 `sessionKey`
+4. 复制其值 (格式: `sk-ant-sid01-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 
 ### 验证安装
 
-安装后，验证服务是否正常运行：
-
 ```bash
 # 健康检查
-curl http://localhost:8000/health
+curl http://localhost:8088/health/health
 
-# 期望响应:
+# 预期响应:
 # {"status": "healthy"}
 ```
 
@@ -138,17 +158,52 @@ curl http://localhost:8000/health
 
 | 变量 | 必填 | 默认 | 描述 |
 |------|------|------|------|
-| `CLAUDE_SESSION_KEY` | 是 | - | Claude.ai 会话密钥 |
-| `PORT` | 否 | `8000` | 服务器端口 |
+| `SESSIONS` | 否 | `[]` | Claude.ai 会话密钥列表 (JSON 数组格式) |
+| `OAUTH_TOKENS` | 否 | `[]` | OAuth 令牌列表 (JSON 数组格式) |
+| `COOKIES` | 否 | `[]` | Cookie 字符串列表 (JSON 数组格式) |
+| `API_KEY` | 否 | - | 后端 API 认证密钥 |
+| `PORT` | 否 | `8088` | 服务器端口 |
 | `HOST` | 否 | `0.0.0.0` | 服务器主机 |
 | `LOG_LEVEL` | 否 | `INFO` | 日志级别 |
 
-## 📖 使用
+## 🖥️ 前端使用
+
+### 访问前端
+
+浏览器打开: `http://localhost:8088` 或 `http://[VPS-IP]:8088`
+
+### 前端功能
+
+- **聊天对话**: 实时与 Claude 进行对话
+- **会话管理**: 创建和管理多个聊天会话
+- **模型选择**: 切换不同的 Claude 模型
+- **工具调用**: 可视化显示 AI 工具调用过程
+- **流式响应**: 实时显示 AI 回答内容
+- **对话导出**: 导出聊天记录
+
+### 前端界面说明
+
+```
+http://localhost:8088/
+├── 聊天页面 (/chat)      - 主要对话界面
+├── 设置页面 (/settings)  - 模型和参数配置
+└── 健康检查 (/health)    - 服务状态监控
+```
+
+### 前端配置
+
+在浏览器中打开前端后:
+1. 点击右上角 **设置** 按钮
+2. 选择 Claude 模型 (默认: `claude-3-5-sonnet-20241022`)
+3. 调整参数 (Temperature, Max Tokens 等)
+4. 点击 **保存** 应用设置
+
+## 📖 使用方法
 
 ### OpenAI API
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl http://localhost:8088/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-3-5-sonnet","messages":[{"role":"user","content":"你好"}]}'
 ```
@@ -156,7 +211,7 @@ curl http://localhost:8000/v1/chat/completions \
 ### Claude 原生 API
 
 ```bash
-curl http://localhost:8000/messages \
+curl http://localhost:8088/messages \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-3-5-sonnet-20241022","messages":[{"role":"user","content":"你好"}]}'
 ```
@@ -164,7 +219,7 @@ curl http://localhost:8000/messages \
 ### 工具调用
 
 ```bash
-curl http://localhost:8000/v1/chat/completions \
+curl http://localhost:8088/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"claude-3-5-sonnet","messages":[{"role":"user","content":"东京天气怎么样？"}],"tools":[{"type":"function","function":{"name":"get_weather","description":"获取天气","parameters":{"type":"object","properties":{"location":{"type":"string"}}}}]}'
 ```
