@@ -4,6 +4,7 @@ class ClaudeAPI {
         this.baseURL = '/v1';
         this.apiKey = localStorage.getItem('claude_api_key') || '';
         this.proxy = localStorage.getItem('claude_proxy') || '';
+        this.responseFormat = localStorage.getItem('claude_response_format') || 'openai';
     }
 
     async fetchModels() {

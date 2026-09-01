@@ -115,6 +115,40 @@
                     </label>
                 </div>
                 <div class="setting-group">
+                    <label>响应格式</label>
+                    <select id="response-format-select" class="model-select">
+                        <option value="openai">OpenAI 格式</option>
+                        <option value="claude">Claude 原生格式</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>会话密钥 (Session Keys)</label>
+                    <textarea 
+                        id="sessions-input" 
+                        placeholder='["sk-ant-sid01-xxx", "sk-ant-sid01-yyy"]'
+                        class="input" rows="3"
+                    ></textarea>
+                    <small>Claude.ai 会话密钥列表 (JSON 数组格式)</small>
+                </div>
+                <div class="setting-group">
+                    <label>OAuth Token</label>
+                    <textarea 
+                        id="oauth-input" 
+                        placeholder='[{"access_token":"xxx","refresh_token":"yyy","expires_at":123}]'
+                        class="input" rows="3"
+                    ></textarea>
+                    <small>OAuth 令牌 (JSON 数组)</small>
+                </div>
+                <div class="setting-group">
+                    <label>Cookies</label>
+                    <textarea 
+                        id="cookies-input" 
+                        placeholder='[{"claude.ai": [{"name":"sessionKey","value":"xxx"}]}]'
+                        class="input" rows="3"
+                    ></textarea>
+                    <small>浏览器 Cookie 格式</small>
+                </div>
+                <div class="setting-group">
                     <label>代理设置</label>
                     <input 
                         type="text" 
@@ -124,9 +158,22 @@
                     >
                 </div>
                 <div class="setting-group">
-                    <button id="fetch-models-btn" class="btn btn-outline w-full">
+                    <button id="save-account-btn" class="btn btn-outline w-full">
+                        保存并激活账户
+                    </button>
+                </div>
+                <div class="setting-group">
+                    <button id="fetch-models-btn" class="btn btn-ghost w-full">
                         刷新模型列表
                     </button>
+                </div>
+                <div class="api-info">
+                    <h4>你的 API 密钥</h4>
+                    <div class="api-key-display">
+                        <code id="generated-api-key">sk-claude-local-xxx</code>
+                        <button id="copy-api-key" class="btn btn-ghost">复制</button>
+                    </div>
+                    <small>使用此密钥调用 API</small>
                 </div>
             </div>
             <div class="modal-footer">

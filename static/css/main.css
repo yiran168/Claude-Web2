@@ -418,20 +418,34 @@ body {
     40% { transform: scale(1); }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
+/* API Key Display */
+.api-info {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
 }
 
-::-webkit-scrollbar-track {
-    background: transparent;
+.api-info h4 {
+    margin-bottom: 10px;
+    color: #495057;
 }
 
-::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.2);
-    border-radius: 3px;
+.api-key-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(0,0,0,0.3);
+.api-key-display code {
+    flex: 1;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
 }

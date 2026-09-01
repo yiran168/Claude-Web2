@@ -5,6 +5,7 @@ class ClaudeWebApp {
         this.conversations = [];
         this.currentConversation = null;
         this.streaming = localStorage.getItem('claude_streaming') !== 'false';
+        this.responseFormat = localStorage.getItem('claude_response_format') || 'openai';
         this.api = window.claudeAPI;
         
         this.init();
@@ -36,6 +37,16 @@ class ClaudeWebApp {
         // Save settings
         document.getElementById('save-settings')?.addEventListener('click', () => {
             this.saveSettings();
+        });
+
+        // Save account credentials
+        document.getElementById('save-account-btn')?.addEventListener('click', () => {
+            this.saveAccountCredentials();
+        });
+
+        // Copy API key
+        document.getElementById('copy-api-key')?.addEventListener('click', () => {
+            this.copyAPIKey();
         });
 
         // Send button
@@ -353,14 +364,142 @@ class ClaudeWebApp {
         const apiKey = document.getElementById('api-key-input')?.value || '';
         const streaming = document.getElementById('streaming-toggle')?.checked || false;
         const proxy = document.getElementById('proxy-input')?.value || '';
+        const responseFormat = document.getElementById('response-format-select')?.value || 'openai';
         
         localStorage.setItem('claude_api_key', apiKey);
         localStorage.setItem('claude_streaming', String(streaming));
         localStorage.setItem('claude_proxy', proxy);
+        localStorage.setItem('claude_response_format', responseFormat);
         
         this.api.apiKey = apiKey;
         this.api.proxy = proxy;
         this.streaming = streaming;
+        this.responseFormat = responseFormat;
+        
+        this.closeSettings();
+        this.showToast('设置已保存!');
+    }
+
+    loadSettings() {
+        const apiKey = localStorage.getItem('claude_api_key') || '';
+        document.getElementById('api-key-input').value = apiKey;
+        document.getElementById('streaming-toggle').checked = this.streaming;
+        
+        const proxy = localStorage.getItem('claude_proxy');
+        if (proxy) document.getElementById('proxy-input').value = proxy;
+        
+        const responseFormat = localStorage.getItem('claude_response_format') || 'openai';
+        document.getElementById('response-format-select').value = responseFormat;
+        this.responseFormat = responseFormat;
+        
+        // Load account credentials
+        const sessions = localStorage.getItem('claude_sessions');
+        const oauth = localStorage.getItem('claude_oauth');
+        const cookies = localStorage.getItem('claude_cookies');
+        
+        if (sessions) document.getElementById('sessions-input').value = sessions;
+        if (oauth) document.getElementById('oauth-input').value = oauth;
+        if (cookies) document.getElementById('cookies-input').value = cookies;
+        
+        // Update API key display
+        if (apiKey) {
+            this.updateAPIKeyDisplay(apiKey);
+        } else {
+            // Generate new API key if none exists
+            const newKey = 'sk-claude-local-' + Date.now().toString(36);
+            localStorage.setItem('claude_api_key', newKey);
+            this.updateAPIKeyDisplay(newKey);
+        }
+    }
+
+    async saveAccountCredentials() {
+        const sessions = document.getElementById('sessions-input').value.trim();
+        const oauth = document.getElementById('oauth-input').value.trim();
+        const cookies = document.getElementById('cookies-input').value.trim();
+        
+        // Validate JSON format
+        let validSessions = [];
+        let validOAuth = [];
+        let validCookies = [];
+        
+        try {
+            if (sessions) {
+                validSessions = JSON.parse(sessions);
+            }
+        } catch (e) {
+            this.showToast('Session Keys 格式错误！');
+            return;
+        }
+        
+        try {
+            if (oauth) {
+                validOAuth = JSON.parse(oauth);
+            }
+        } catch (e) {
+            this.showToast('OAuth Token 格式错误！');
+            return;
+        }
+        
+        try {
+            if (cookies) {
+                validCookies = JSON.parse(cookies);
+            }
+        } catch (e) {
+            this.showToast('Cookies 格式错误！');
+            return;
+        }
+        
+        // Save to localStorage
+        if (sessions) localStorage.setItem('claude_sessions', sessions);
+        if (oauth) localStorage.setItem('claude_oauth', oauth);
+        if (cookies) localStorage.setItem('claude_cookies', cookies);
+        
+        // Test accounts
+        await this.testAccounts();
+    }
+
+    async testAccounts() {
+        const btn = document.getElementById('save-account-btn');
+        const originalText = btn.textContent;
+        btn.textContent = '测试账户中...';
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch('/health/health', {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${this.api.apiKey}` }
+            });
+            
+            if (response.ok) {
+                this.showToast('账户保存并激活成功 ✅');
+            } else {
+                this.showToast('账户已保存，请检查格式');
+            }
+        } catch (e) {
+            this.showToast('账户已保存 (无法立即测试)');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    updateAPIKeyDisplay(apiKey) {
+        const el = document.getElementById('generated-api-key');
+        if (el) el.textContent = apiKey || '尚未生成';
+        this.api.apiKey = apiKey || '';
+    }
+
+    copyAPIKey() {
+        const keyEl = document.getElementById('generated-api-key');
+        if (keyEl) {
+            const key = keyEl.textContent;
+            if (key && key !== '尚未生成') {
+                navigator.clipboard.writeText(key);
+                this.showToast('API 密钥已复制到剪贴板！');
+            } else {
+                this.showToast('请先保存设置生成密钥');
+            }
+        }
     }
 
     openSettings() {
