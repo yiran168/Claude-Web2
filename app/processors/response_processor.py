@@ -245,9 +245,12 @@ class StreamingResponseProcessor(BaseProcessor):
             return context
 
         # Check if this is a streaming request
-        if not context.messages_api_request or not context.messages_api_request.stream:
-            logger.debug("Skipping StreamingResponseProcessor - non-streaming request")
-            return context
+        stream = context.metadata.get("stream", False)
+        if not stream:
+            # Fallback: check messages_api_request if available
+            if context.messages_api_request and not context.messages_api_request.stream:
+                logger.debug("Skipping StreamingResponseProcessor - non-streaming request")
+                return context
 
         logger.info("Creating streaming response")
 
@@ -289,6 +292,11 @@ class NonStreamingResponseProcessor(BaseProcessor):
             logger.debug("Skipping NonStreamingResponseProcessor - response already set")
             return context
 
+        # Check if this is a streaming request
+        stream = context.metadata.get("stream", False)
+        if stream:
+            logger.debug("Skipping NonStreamingResponseProcessor - streaming request")
+            return context
         if context.messages_api_request and context.messages_api_request.stream:
             logger.debug("Skipping NonStreamingResponseProcessor - streaming request")
             return context

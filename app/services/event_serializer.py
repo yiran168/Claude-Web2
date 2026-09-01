@@ -118,7 +118,16 @@ class EventSerializer:
                     yield self._serialize_usage(usage)
 
                 if stop_reason:
-                    yield self._serialize_finish_reason(stop_reason)
+                    # Map Claude stop_reason to OpenAI finish_reason
+                    stop_reason_map = {
+                        "tool_use": "tool_calls",
+                        "end_turn": "stop",
+                        "max_tokens": "length",
+                        "stop_sequence": "stop",
+                        "pause_turn": "stop",
+                    }
+                    mapped_reason = stop_reason_map.get(stop_reason, stop_reason)
+                    yield self._serialize_finish_reason(mapped_reason)
 
             # Handle message stop
             elif event_type == "message_stop":
