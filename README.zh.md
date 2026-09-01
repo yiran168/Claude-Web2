@@ -194,9 +194,42 @@ http://localhost:8088/
 
 在浏览器中打开前端后:
 1. 点击右上角 **设置** 按钮
-2. 选择 Claude 模型 (默认: `claude-3-5-sonnet-20241022`)
+2. 选择 Claude 模型 (默认: `claude-sonnet-4-20250514` - 自动从 Claude.ai 获取)
 3. 调整参数 (Temperature, Max Tokens 等)
 4. 点击 **保存** 应用设置
+
+### 前端界面预览
+
+```
+仪表盘:                             聊天界面:
+┌─────────────────────────────┐     ┌─────────────────────────────┐
+│  Claude Web 接口            │     │  新建对话                  │
+│                             │     │                             │
+│  [设置] [模型]               │     │  ┌───────────────────────┐  │
+│  ─────────────────────────  │     │  │ 你好，有什么可以帮助你的？│  │
+│                             │     │  │                       │  │
+│  可用模型:                   │     │  └───────────────────────┘  │
+│  • claude-sonnet-4-20250514 │     │                             │
+│  • claude-opus-4-20250514   │     │  [输入消息...]              │
+│  • claude-3-7-sonnet-20250219 │   │  [发送] [上传图片]          │
+│  • claude-3-5-sonnet-20241022 │  └─────────────────────────────┘
+└─────────────────────────────┘
+```
+
+### 前端 API 集成
+
+前端包含 JavaScript SDK 便于集成:
+
+```javascript
+// 初始化前端客户端
+const client = new ClaudeWebClient('http://localhost:8088', '你的API密钥');
+
+// 发送消息
+const response = await client.chat.completions.create({
+  model: 'claude-sonnet-4-20250514',
+  messages: [{ role: 'user', content: '你好！' }]
+});
+```
 
 ## 📖 使用方法
 

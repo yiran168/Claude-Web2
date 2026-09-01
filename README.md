@@ -194,9 +194,42 @@ http://localhost:8088/
 
 After opening the frontend in browser:
 1. Click the **Settings** button in the top-right corner
-2. Select Claude model (default: `claude-3-5-sonnet-20241022`)
+2. Select Claude model (default: `claude-sonnet-4-20250514` - automatically fetched from Claude.ai)
 3. Adjust parameters (Temperature, Max Tokens, etc.)
 4. Click **Save** to apply settings
+
+### Frontend Screenshots
+
+```
+Dashboard:                           Chat Interface:
+┌─────────────────────────────┐     ┌─────────────────────────────┐
+│  Claude Web Interface       │     │  New Chat                   │
+│                             │     │                             │
+│  [Settings] [Models]         │     │  ┌───────────────────────┐  │
+│  ─────────────────────────  │     │  │ Hello, how can I help?│  │
+│                             │     │  │                       │  │
+│  Available Models:          │     │  └───────────────────────┘  │
+│  • claude-sonnet-4-20250514 │     │                             │
+│  • claude-opus-4-20250514   │     │  [Type message...]          │
+│  • claude-3-7-sonnet-20250219    │  │  [Send] [Upload Image]    │
+│  • claude-3-5-sonnet-20241022    │  └─────────────────────────────┘
+└─────────────────────────────┘
+```
+
+### Frontend API Integration
+
+The frontend includes JavaScript SDK for easy integration:
+
+```javascript
+// Initialize frontend client
+const client = new ClaudeWebClient('http://localhost:8088', 'your-api-key');
+
+// Send a message
+const response = await client.chat.completions.create({
+  model: 'claude-sonnet-4-20250514',
+  messages: [{ role: 'user', content: 'Hello!' }]
+});
+```
 
 ## 📖 Usage
 
