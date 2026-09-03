@@ -1,0 +1,14 @@
+.git
+.github
+.research
+.agent-browser
+.npm-cache
+node_modules
+dist
+data
+dogfood-output
+coverage
+.env
+*.log
+*.db*
+README*.md

@@ -1,19 +1,32 @@
-version: "3.8"
-
 services:
   claude-web2:
     build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - TZ=UTC
-    volumes:
-      - ./data:/app/data
-      - ./.env:/app/.env:ro
+    image: claude-web2:local
+    init: true
     restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CW2_HOST: 0.0.0.0
+      CW2_PORT: 8787
+      CW2_DATA_DIR: /app/data
+    ports:
+      - "${CW2_BIND_ADDRESS:-127.0.0.1}:${CW2_PORT:-8787}:8787"
+    volumes:
+      - claude-web2-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  claude-web2-data:
